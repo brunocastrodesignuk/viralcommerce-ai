@@ -1,0 +1,180 @@
+name: CD — Build · Push · Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false   # Never cancel a running deploy
+
+env:
+  PYTHON_VERSION: "3.12"
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository }}/api
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend
+  IMAGE_CRAWLER: ghcr.io/${{ github.repository }}/crawler
+
+jobs:
+  # ── 1. Run full CI first ─────────────────────────────────────────────────────
+  ci-gate:
+    name: CI Gate
+    uses: ./.github/workflows/ci.yml
+
+  # ── 2. Build & Push Docker images ───────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    needs: ci-gate
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BACKEND }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+
+      # ── Backend ──
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_BACKEND }}:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_BACKEND }}:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Frontend ──
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend
+          file: infrastructure/docker/Dockerfile.frontend
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          tags: |
+            ${{ env.IMAGE_FRONTEND }}:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_FRONTEND }}:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Crawler ──
+      - name: Build & push crawler
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.crawler
+          push: true
+          tags: |
+            ${{ env.IMAGE_CRAWLER }}:${{ steps.meta.outputs.version }}
+            ${{ env.IMAGE_CRAWLER }}:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 3. Database Migrations ───────────────────────────────────────────────────
+  migrate:
+    name: Run Migrations
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install alembic
+        run: pip install alembic asyncpg sqlalchemy
+
+      - name: Run migrations
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # ── 4. Deploy to Kubernetes ──────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: migrate
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.29.0"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Update image tags in K8s manifests
+        run: |
+          IMAGE_TAG=${{ needs.build-and-push.outputs.image-tag }}
+          sed -i "s|IMAGE_TAG_PLACEHOLDER|${IMAGE_TAG}|g" infrastructure/k8s/deployments/*.yaml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f infrastructure/k8s/deployments/ -n viralcommerce
+          kubectl apply -f infrastructure/k8s/ingress/    -n viralcommerce
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/viralcommerce-api     -n viralcommerce --timeout=120s
+          kubectl rollout status deployment/viralcommerce-frontend -n viralcommerce --timeout=120s
+          kubectl rollout status deployment/celery-worker          -n viralcommerce --timeout=120s
+
+      - name: Verify deployment health
+        run: |
+          sleep 10
+          kubectl get pods -n viralcommerce
+          API_URL=$(kubectl get ingress -n viralcommerce -o jsonpath='{.items[0].spec.rules[0].host}')
+          curl -sf "https://${API_URL}/health" | grep '"status":"ok"'
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Deployment successful — tag: ${{ needs.build-and-push.outputs.image-tag }}"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed — rolling back..."
+          kubectl rollout undo deployment/viralcommerce-api     -n viralcommerce
+          kubectl rollout undo deployment/viralcommerce-frontend -n viralcommerce

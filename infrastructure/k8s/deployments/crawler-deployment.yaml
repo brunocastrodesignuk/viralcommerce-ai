@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: viralcommerce-crawler
+  namespace: viralcommerce
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: viralcommerce-crawler
+  template:
+    metadata:
+      labels:
+        app: viralcommerce-crawler
+    spec:
+      containers:
+        - name: crawler
+          image: viralcommerce/crawler:latest
+          command: ["scrapy", "crawl", "tiktok"]
+          envFrom:
+            - secretRef:
+                name: viralcommerce-secrets
+            - configMapRef:
+                name: viralcommerce-config
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: crawler-hpa
+  namespace: viralcommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: viralcommerce-crawler
+  minReplicas: 5
+  maxReplicas: 50    # Scale to 50 crawler pods for 50M videos/day
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

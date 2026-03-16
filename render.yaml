@@ -1,0 +1,99 @@
+# Render.com Blueprint — ViralCommerce AI
+# ─────────────────────────────────────────────────────────────────────────────
+# Como usar:
+#   1. git push para o GitHub
+#   2. render.com → New → Blueprint → aponte para o repo
+#   3. Preencha ANTHROPIC_API_KEY no painel (obrigatório)
+#   4. Clique "Apply" — tudo sobe automaticamente
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── Backend FastAPI ──────────────────────────────────────────────────────────
+  - type: web
+    name: viralcommerce-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements-production.txt
+    startCommand: python scripts/start_production.py
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: viralcommerce-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: viralcommerce-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: viralcommerce-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: viralcommerce-redis
+          type: redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: '["https://viralcommerce-frontend.onrender.com","http://localhost:3000"]'
+      - key: LLM_MODEL
+        value: claude-sonnet-4-6
+      - key: CLICKHOUSE_HOST
+        value: ""
+      - key: ELASTICSEARCH_URL
+        value: ""
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: ""
+      - key: ANTHROPIC_API_KEY
+        sync: false          # ← preencha no painel Render (obrigatório para IA)
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: GOOGLE_ADS_DEVELOPER_TOKEN
+        sync: false
+      - key: TIKTOK_ADS_ACCESS_TOKEN
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: ALIEXPRESS_APP_KEY
+        sync: false
+      - key: CJ_DROPSHIPPING_API_KEY
+        sync: false
+
+  # ── Frontend Next.js ─────────────────────────────────────────────────────────
+  - type: web
+    name: viralcommerce-frontend
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20.11.0"
+      - key: NEXT_PUBLIC_API_URL
+        value: https://viralcommerce-api.onrender.com/api/v1
+      - key: NODE_ENV
+        value: production
+
+databases:
+  # PostgreSQL gratuito (90 dias, depois $7/mo)
+  - name: viralcommerce-db
+    databaseName: viralcommerce
+    user: viralcommerce
+    plan: free
+
+  # Redis gratuito (25 MB)
+  - name: viralcommerce-redis
+    type: redis
+    plan: free
+    ipAllowList: []

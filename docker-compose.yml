@@ -1,0 +1,275 @@
+version: "3.9"
+
+# ─── ViralCommerce AI — Local Development Stack ───────────────
+
+networks:
+  viralnet:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  clickhouse_data:
+  elasticsearch_data:
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: vc_postgres
+    environment:
+      POSTGRES_DB: viralcommerce
+      POSTGRES_USER: viralcommerce
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schemas/001_init_postgresql.sql:/docker-entrypoint-initdb.d/01_init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - viralnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U viralcommerce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: vc_redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - viralnet
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+
+  # ── Kafka ────────────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: vc_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - viralnet
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: vc_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    ports:
+      - "29092:29092"
+    networks:
+      - viralnet
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── ClickHouse ───────────────────────────────────────────────
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.4
+    container_name: vc_clickhouse
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./database/schemas/002_clickhouse_analytics.sql:/docker-entrypoint-initdb.d/02_analytics.sql
+    ports:
+      - "8123:8123"   # HTTP
+      - "9000:9000"   # Native
+    networks:
+      - viralnet
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+
+  # ── Elasticsearch ─────────────────────────────────────────────
+  elasticsearch:
+    image: elasticsearch:8.13.0
+    container_name: vc_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - viralnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\\|yellow\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ── FastAPI Backend ──────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: vc_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://viralcommerce:password@postgres:5432/viralcommerce
+      REDIS_URL: redis://redis:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CLICKHOUSE_HOST: clickhouse
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      DEBUG: "false"
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - viralnet
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app/backend
+      - ./ai:/app/ai
+
+  # ── Celery Worker ────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: vc_celery
+    command: celery -A backend.workers.celery_app worker --loglevel=info --concurrency=4
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      DATABASE_URL: postgresql+asyncpg://viralcommerce:password@postgres:5432/viralcommerce
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    env_file:
+      - .env
+    networks:
+      - viralnet
+    restart: unless-stopped
+
+  # ── Celery Beat (Scheduler) ──────────────────────────────────
+  celery_beat:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: vc_celery_beat
+    command: celery -A backend.workers.celery_app beat --loglevel=info
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    networks:
+      - viralnet
+    restart: unless-stopped
+
+  # ── Virality Scorer (Kafka Consumer) ─────────────────────────
+  virality_scorer:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: vc_virality_scorer
+    command: python -m ai.virality.kafka_consumer
+    depends_on:
+      - kafka
+      - postgres
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    env_file:
+      - .env
+    networks:
+      - viralnet
+    restart: unless-stopped
+
+  # ── Crawler (TikTok) ─────────────────────────────────────────
+  crawler_tiktok:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.crawler
+    container_name: vc_crawler_tiktok
+    command: scrapy crawl tiktok
+    depends_on:
+      - redis
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_URL: redis://redis:6379/3
+    env_file:
+      - .env
+    networks:
+      - viralnet
+    restart: unless-stopped
+
+  # ── Frontend ─────────────────────────────────────────────────
+  frontend:
+    image: node:20-alpine
+    container_name: vc_frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    networks:
+      - viralnet
+    restart: unless-stopped
+
+  # ── Kafka UI ─────────────────────────────────────────────────
+  kafka_ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: vc_kafka_ui
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: viralcommerce
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - viralnet
+
+  # ── Flower (Celery Monitor) ───────────────────────────────────
+  flower:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    container_name: vc_flower
+    command: celery -A backend.workers.celery_app flower --port=5555
+    depends_on:
+      - redis
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    networks:
+      - viralnet

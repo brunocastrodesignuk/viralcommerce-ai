@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
+      "port": 3000
+    },
+    {
+      "name": "Backend API (FastAPI)",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["backend.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "Full Stack (Docker Compose)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up"],
+      "port": 3000
+    },
+    {
+      "name": "Virality Scorer (Kafka Consumer)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "ai.virality.kafka_consumer"],
+      "port": 9092
+    },
+    {
+      "name": "Celery Worker",
+      "runtimeExecutable": "celery",
+      "runtimeArgs": ["-A", "backend.workers.celery_app", "worker", "--loglevel=info", "--concurrency=4"],
+      "port": 5555
+    },
+    {
+      "name": "TikTok Crawler (Scrapy)",
+      "runtimeExecutable": "scrapy",
+      "runtimeArgs": ["crawl", "tiktok"],
+      "port": 6023
+    }
+  ]
+}

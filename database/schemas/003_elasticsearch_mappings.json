@@ -1,0 +1,66 @@
+{
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1,
+    "analysis": {
+      "analyzer": {
+        "product_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase", "stop", "snowball"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "products": {
+      "properties": {
+        "id":                { "type": "keyword" },
+        "name":              { "type": "text", "analyzer": "product_analyzer", "fields": { "keyword": { "type": "keyword" } } },
+        "category":          { "type": "keyword" },
+        "subcategory":       { "type": "keyword" },
+        "description":       { "type": "text", "analyzer": "product_analyzer" },
+        "tags":              { "type": "keyword" },
+        "viral_score":       { "type": "float" },
+        "competition_score": { "type": "float" },
+        "demand_score":      { "type": "float" },
+        "status":            { "type": "keyword" },
+        "estimated_price_min": { "type": "float" },
+        "estimated_price_max": { "type": "float" },
+        "image_urls":        { "type": "keyword" },
+        "embedding":         { "type": "dense_vector", "dims": 512, "index": true, "similarity": "cosine" },
+        "first_detected_at": { "type": "date" },
+        "updated_at":        { "type": "date" }
+      }
+    },
+    "videos": {
+      "properties": {
+        "id":             { "type": "keyword" },
+        "platform":       { "type": "keyword" },
+        "external_id":    { "type": "keyword" },
+        "url":            { "type": "keyword" },
+        "title":          { "type": "text", "analyzer": "product_analyzer" },
+        "caption":        { "type": "text", "analyzer": "product_analyzer" },
+        "hashtags":       { "type": "keyword" },
+        "views":          { "type": "long" },
+        "likes":          { "type": "long" },
+        "shares":         { "type": "long" },
+        "comments":       { "type": "long" },
+        "viral_score":    { "type": "float" },
+        "published_at":   { "type": "date" },
+        "crawled_at":     { "type": "date" }
+      }
+    },
+    "hashtags": {
+      "properties": {
+        "id":             { "type": "keyword" },
+        "tag":            { "type": "keyword" },
+        "platform":       { "type": "keyword" },
+        "post_count":     { "type": "long" },
+        "trend_velocity": { "type": "float" },
+        "is_tracked":     { "type": "boolean" },
+        "updated_at":     { "type": "date" }
+      }
+    }
+  }
+}
