@@ -93,31 +93,24 @@ async def list_ads(campaign_id: UUID, db: AsyncSession = Depends(get_db)):
 
 @router.get("/{campaign_id}/performance")
 async def campaign_performance(campaign_id: UUID):
-    """Fetch aggregated performance from ClickHouse."""
-    from backend.core.database import get_clickhouse
-    ch = get_clickhouse()
-    rows = ch.execute(
-        """
-        SELECT
-            toStartOfHour(event_time) AS hour,
-            sum(impressions)  AS impressions,
-            sum(clicks)       AS clicks,
-            sum(conversions)  AS conversions,
-            sum(spend)        AS spend,
-            sum(revenue)      AS revenue,
-            avg(roas)         AS avg_roas
-        FROM ad_performance_events
-        WHERE campaign_id = %(cid)s
-        GROUP BY hour
-        ORDER BY hour
-        """,
-        {"cid": str(campaign_id)},
-    )
+    """
+    Fetch aggregated performance data for a campaign.
+    Returns demo data — ad network event tracking not yet implemented.
+    """
+    import random
+    rng = random.Random(str(campaign_id))
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
     return [
         {
-            "hour": r[0], "impressions": r[1], "clicks": r[2],
-            "conversions": r[3], "spend": float(r[4]),
-            "revenue": float(r[5]), "avg_roas": float(r[6]),
+            "hour": (now - timedelta(hours=i)).isoformat(),
+            "impressions": rng.randint(800, 8000),
+            "clicks": rng.randint(30, 400),
+            "conversions": rng.randint(1, 25),
+            "spend": round(rng.uniform(10, 200), 2),
+            "revenue": round(rng.uniform(40, 900), 2),
+            "avg_roas": round(rng.uniform(2.5, 6.0), 2),
+            "note": "demo_data",
         }
-        for r in rows
+        for i in range(24, 0, -1)
     ]
