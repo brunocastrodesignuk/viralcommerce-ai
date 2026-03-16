@@ -202,6 +202,10 @@ async def full_product_analysis(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
+    # Convert Decimal columns to float to avoid JSON serialization errors
+    price_min = float(product.estimated_price_min or 9.99)
+    price_max = float(product.estimated_price_max or 49.99)
+
     rng = random.Random(str(product_id))  # deterministic for same product
 
     # 1. Viral score breakdown
@@ -220,7 +224,7 @@ async def full_product_analysis(
     avg_views_per_video = rng.randint(45000, 2300000)
     total_views = videos_mentioning * avg_views_per_video
     monthly_sales_estimate = rng.randint(8000, 450000)
-    market_size_usd = round(monthly_sales_estimate * product.estimated_price_max, -2)
+    market_size_usd = round(monthly_sales_estimate * price_max, -2)
 
     market_data = {
         "tiktok_videos": videos_mentioning,
@@ -238,7 +242,7 @@ async def full_product_analysis(
     competition_data = {
         "total_sellers": competitors_count,
         "avg_competitor_price": round(
-            (product.estimated_price_min + product.estimated_price_max) / 2 * rng.uniform(0.85, 1.3),
+            (price_min + price_max) / 2 * rng.uniform(0.85, 1.3),
             2,
         ),
         "competition_level": _competition_level(product.competition_score),
@@ -252,10 +256,10 @@ async def full_product_analysis(
     try:
         suppliers = await supplier_service.discover(
             product_name=product.name,
-            target_sale_price=product.estimated_price_max,
+            target_sale_price=price_max,
         )
     except Exception:
-        suppliers = _mock_suppliers_realistic(product, rng)
+        suppliers = _mock_suppliers_realistic(price_min, price_max, product.name, rng)
 
     # 5. AI Marketing assets
     gen = MarketingGeneratorService()
@@ -299,8 +303,8 @@ async def full_product_analysis(
             "viral_score":  product.viral_score,
             "demand_score": product.demand_score,
             "competition_score": product.competition_score,
-            "estimated_price_min": product.estimated_price_min,
-            "estimated_price_max": product.estimated_price_max,
+            "estimated_price_min": price_min,
+            "estimated_price_max": price_max,
             "image_urls":   product.image_urls,
             "tags":         product.tags,
             "status":       product.status,
@@ -545,29 +549,31 @@ def _mock_competitors(product_name: str, rng: random.Random) -> list[dict]:
     ]
 
 
-def _mock_suppliers_realistic(product, rng: random.Random) -> list[dict]:
-    base = product.estimated_price_min
+def _mock_suppliers_realistic(price_min: float, price_max: float, name: str, rng: random.Random) -> list[dict]:
+    base = float(price_min)
+    sale = float(price_max)
+    platforms = [("aliexpress", 12, 25), ("cj_dropshipping", 7, 14), ("spocket", 3, 7)]
     return [
         {
-            "platform": "aliexpress",
+            "platform": plat,
             "supplier_name": f"Top Supplier {rng.randint(100,999)}",
-            "product_name": product.name,
+            "product_name": name,
             "supplier_url": f"https://www.aliexpress.com/item/{rng.randint(10**11, 10**12)}.html",
             "cost_price": round(base, 2),
             "shipping_cost": round(rng.uniform(1.5, 4.5), 2),
             "total_cost": round(base + rng.uniform(1.5, 4.5), 2),
-            "shipping_days_min": 12,
-            "shipping_days_max": 25,
+            "shipping_days_min": dmin,
+            "shipping_days_max": dmax,
             "moq": 1,
             "rating": round(rng.uniform(4.3, 4.9), 1),
             "total_orders": rng.randint(1000, 80000),
             "in_stock": True,
-            "profit_margin_pct": round((product.estimated_price_max - base) / product.estimated_price_max * 100, 1),
-            "roi_pct": round((product.estimated_price_max - base) / base * 100, 1),
-            "sale_price": product.estimated_price_max,
-            "profit": round(product.estimated_price_max - base, 2),
+            "profit_margin_pct": round((sale - base) / max(sale, 1) * 100, 1),
+            "roi_pct": round((sale - base) / max(base, 1) * 100, 1),
+            "sale_price": round(sale, 2),
+            "profit": round(sale - base, 2),
         }
-        for _ in range(3)
+        for plat, dmin, dmax in platforms
     ]
 
 
