@@ -1,6 +1,8 @@
 """
 Suppliers API — supplier discovery and profit analysis
+Returns real DB data when available, rich mock data as fallback.
 """
+import random
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, desc
@@ -10,6 +12,161 @@ from backend.models.supplier import Supplier
 from backend.models.product import ProductListing
 
 router = APIRouter()
+
+# ─── High-fidelity mock supplier data ────────────────────────────────────────
+_MOCK_SUPPLIERS = [
+    {
+        "id": "sup-001",
+        "platform": "aliexpress",
+        "name": "Top Beauty & Care Store",
+        "rating": 4.8,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "AU", "UK", "DE", "FR"],
+        "store_url": "https://www.aliexpress.com/store/1234567",
+        "listings": [
+            {
+                "id": "lst-001", "product_name": "Oval Face Framing Glasses Anti Blue Light",
+                "cost_price": 8.99, "shipping_cost": 1.99, "moq": 1,
+                "profit_margin_pct": 72.5, "lead_time_days": 15,
+            },
+            {
+                "id": "lst-002", "product_name": "LED Face Mask Photon Therapy",
+                "cost_price": 22.50, "shipping_cost": 3.50, "moq": 1,
+                "profit_margin_pct": 68.3, "lead_time_days": 18,
+            },
+            {
+                "id": "lst-003", "product_name": "Snail Mucin Serum 96%",
+                "cost_price": 6.80, "shipping_cost": 1.50, "moq": 5,
+                "profit_margin_pct": 74.1, "lead_time_days": 12,
+            },
+        ],
+    },
+    {
+        "id": "sup-002",
+        "platform": "cj_dropshipping",
+        "name": "CJ Fashion & Electronics Hub",
+        "rating": 4.6,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "AU", "UK", "BR", "MX"],
+        "store_url": "https://cjdropshipping.com/supplier/fashion-hub",
+        "listings": [
+            {
+                "id": "lst-004", "product_name": "Cloud Slippers Thick Sole Platform",
+                "cost_price": 12.40, "shipping_cost": 2.80, "moq": 1,
+                "profit_margin_pct": 65.8, "lead_time_days": 7,
+            },
+            {
+                "id": "lst-005", "product_name": "Cottagecore Floral Hair Claw Clips Set",
+                "cost_price": 3.20, "shipping_cost": 1.20, "moq": 3,
+                "profit_margin_pct": 78.4, "lead_time_days": 8,
+            },
+            {
+                "id": "lst-006", "product_name": "Magnetic MagSafe Phone Wallet",
+                "cost_price": 4.90, "shipping_cost": 1.10, "moq": 2,
+                "profit_margin_pct": 76.2, "lead_time_days": 6,
+            },
+        ],
+    },
+    {
+        "id": "sup-003",
+        "platform": "aliexpress",
+        "name": "TechGadget Pro Wholesale",
+        "rating": 4.7,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "UK", "AU", "SG", "NZ"],
+        "store_url": "https://www.aliexpress.com/store/7654321",
+        "listings": [
+            {
+                "id": "lst-007", "product_name": "Portable Neck Fan Mini Air Conditioner",
+                "cost_price": 14.20, "shipping_cost": 2.60, "moq": 1,
+                "profit_margin_pct": 63.7, "lead_time_days": 20,
+            },
+            {
+                "id": "lst-008", "product_name": "Digital Retro Flip LED Alarm Clock",
+                "cost_price": 11.80, "shipping_cost": 3.20, "moq": 1,
+                "profit_margin_pct": 66.4, "lead_time_days": 22,
+            },
+        ],
+    },
+    {
+        "id": "sup-004",
+        "platform": "alibaba",
+        "name": "Shenzhen Beauty Factory Direct",
+        "rating": 4.5,
+        "is_verified": False,
+        "ships_to": ["US", "CA", "AU", "UK", "DE", "FR", "JP"],
+        "store_url": "https://beauty-factory.en.alibaba.com",
+        "listings": [
+            {
+                "id": "lst-009", "product_name": "Korean Glass Skin Sunscreen SPF50+",
+                "cost_price": 5.40, "shipping_cost": 2.10, "moq": 50,
+                "profit_margin_pct": 79.8, "lead_time_days": 25,
+            },
+            {
+                "id": "lst-010", "product_name": "Hailey Bieber Glazed Donut Lip Balm",
+                "cost_price": 2.90, "shipping_cost": 1.80, "moq": 100,
+                "profit_margin_pct": 82.3, "lead_time_days": 30,
+            },
+            {
+                "id": "lst-011", "product_name": "Press-On Nails Kit Professional 500pcs",
+                "cost_price": 4.20, "shipping_cost": 2.40, "moq": 20,
+                "profit_margin_pct": 77.6, "lead_time_days": 28,
+            },
+        ],
+    },
+    {
+        "id": "sup-005",
+        "platform": "cj_dropshipping",
+        "name": "Home & Lifestyle Dropship Co.",
+        "rating": 4.4,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "UK", "AU", "NZ"],
+        "store_url": "https://cjdropshipping.com/supplier/home-lifestyle",
+        "listings": [
+            {
+                "id": "lst-012", "product_name": "Matcha Whisk Set Bamboo Traditional",
+                "cost_price": 7.60, "shipping_cost": 1.90, "moq": 1,
+                "profit_margin_pct": 70.2, "lead_time_days": 9,
+            },
+            {
+                "id": "lst-013", "product_name": "Stanley-Style Quencher Tumbler 40oz",
+                "cost_price": 10.20, "shipping_cost": 3.80, "moq": 1,
+                "profit_margin_pct": 62.8, "lead_time_days": 10,
+            },
+            {
+                "id": "lst-014", "product_name": "Portable Espresso Machine Handheld",
+                "cost_price": 18.90, "shipping_cost": 4.20, "moq": 1,
+                "profit_margin_pct": 61.4, "lead_time_days": 14,
+            },
+        ],
+    },
+    {
+        "id": "sup-006",
+        "platform": "aliexpress",
+        "name": "Health & Wellness Global Store",
+        "rating": 4.6,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "AU", "UK", "IE"],
+        "store_url": "https://www.aliexpress.com/store/9876543",
+        "listings": [
+            {
+                "id": "lst-015", "product_name": "Ice Roller Face Lymphatic Drainage",
+                "cost_price": 5.20, "shipping_cost": 1.40, "moq": 1,
+                "profit_margin_pct": 75.9, "lead_time_days": 13,
+            },
+            {
+                "id": "lst-016", "product_name": "Teeth Whitening Kit LED 35% CP",
+                "cost_price": 9.80, "shipping_cost": 2.20, "moq": 2,
+                "profit_margin_pct": 71.3, "lead_time_days": 16,
+            },
+            {
+                "id": "lst-017", "product_name": "Posture Corrector Smart Bluetooth",
+                "cost_price": 16.40, "shipping_cost": 3.60, "moq": 1,
+                "profit_margin_pct": 64.7, "lead_time_days": 19,
+            },
+        ],
+    },
+]
 
 
 @router.get("/")
@@ -22,25 +179,57 @@ async def list_suppliers(
     if platform:
         query = query.where(Supplier.platform == platform)
     result = await db.scalars(query.order_by(desc(Supplier.rating)).limit(limit))
-    return result.all()
+    suppliers = result.all()
+
+    if suppliers:
+        return suppliers
+
+    # ── Fallback: return rich mock supplier data ──────────────────────────
+    mock = _MOCK_SUPPLIERS
+    if platform and platform != "all":
+        mock = [s for s in mock if s["platform"] == platform]
+    return mock[:limit]
 
 
 @router.get("/{supplier_id}")
-async def get_supplier(supplier_id: UUID, db: AsyncSession = Depends(get_db)):
-    supplier = await db.get(Supplier, supplier_id)
-    if not supplier:
-        raise HTTPException(404, "Supplier not found")
-    return supplier
+async def get_supplier(supplier_id: str, db: AsyncSession = Depends(get_db)):
+    # Try UUID lookup first
+    try:
+        uid = UUID(supplier_id)
+        supplier = await db.get(Supplier, uid)
+        if supplier:
+            return supplier
+    except ValueError:
+        pass
+
+    # Try mock suppliers
+    for s in _MOCK_SUPPLIERS:
+        if s["id"] == supplier_id:
+            return s
+
+    raise HTTPException(404, "Supplier not found")
 
 
 @router.get("/{supplier_id}/listings")
 async def supplier_listings(
-    supplier_id: UUID,
+    supplier_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.scalars(
-        select(ProductListing)
-        .where(ProductListing.supplier_id == supplier_id)
-        .order_by(desc(ProductListing.profit_margin_pct))
-    )
-    return result.all()
+    try:
+        uid = UUID(supplier_id)
+        result = await db.scalars(
+            select(ProductListing)
+            .where(ProductListing.supplier_id == uid)
+            .order_by(desc(ProductListing.profit_margin_pct))
+        )
+        listings = result.all()
+        if listings:
+            return listings
+    except ValueError:
+        pass
+
+    # Return mock listings for the given supplier ID
+    for s in _MOCK_SUPPLIERS:
+        if s["id"] == supplier_id:
+            return s.get("listings", [])
+    return []

@@ -254,10 +254,7 @@ class TikTokShopCrawler:
                 "rating": round(rng.uniform(4.3, 4.9), 1),
                 "viral_score": round(min(100, viral_score + score_var), 1),
                 "tags": tags,
-                "image_url": (
-                    f"https://via.placeholder.com/400x400/0f172a/0ea5e9"
-                    f"?text={img_hint.replace('+', '+')}"
-                ),
+                "image_url": f"https://placehold.co/400x400/0f172a/38bdf8?text={img_hint}",
                 "product_url": f"https://www.tiktok.com/search?q={name.replace(' ', '+')}",
                 "source": "tiktok_shop_verified",
                 "last_crawled": datetime.now(timezone.utc).isoformat(),
