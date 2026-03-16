@@ -12,10 +12,20 @@ export const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Auth token injection
+// Auth token injection — reads from Zustand persist store (key: "viralcommerce-auth")
 api.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("viralcommerce-auth");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const token: string | undefined = parsed?.state?.token;
+        if (token) config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+  }
   return config;
 });
 
