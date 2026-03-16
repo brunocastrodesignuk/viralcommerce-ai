@@ -68,6 +68,12 @@ services:
       - key: CJ_DROPSHIPPING_API_KEY
         sync: false
 
+  # ── Redis (Key-Value) ────────────────────────────────────────────────────────
+  - type: redis
+    name: viralcommerce-redis
+    plan: free
+    ipAllowList: []
+
   # ── Frontend Next.js ─────────────────────────────────────────────────────────
   - type: web
     name: viralcommerce-frontend
@@ -91,9 +97,3 @@ databases:
     databaseName: viralcommerce
     user: viralcommerce
     plan: free
-
-  # Redis gratuito (25 MB)
-  - name: viralcommerce-redis
-    type: redis
-    plan: free
-    ipAllowList: []
