@@ -4,6 +4,7 @@ import { Product } from "@/lib/api";
 import { ViralScoreBadge } from "@/components/ui/ViralScoreBadge";
 import { ArrowUpRight, ShoppingCart, Zap, Package } from "lucide-react";
 import { clsx } from "clsx";
+import { useRouter } from "next/navigation";
 
 interface ProductCardProps {
   product: Product;
@@ -20,12 +21,21 @@ export function ProductCard({
   onFindSupplier,
   onClick,
 }: ProductCardProps) {
-  const img = product.image_urls?.[0];
+  const img    = product.image_urls?.[0];
+  const router = useRouter();
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(product);
+    } else {
+      router.push(`/products/${product.id}`);
+    }
+  };
 
   return (
     <div
-      className="card hover:border-gray-700 cursor-pointer transition-all group"
-      onClick={() => onClick?.(product)}
+      className="card hover:border-sky-500/30 cursor-pointer transition-all group"
+      onClick={handleCardClick}
     >
       {/* Image */}
       <div className="relative h-44 bg-gray-800 rounded-lg mb-4 overflow-hidden">

@@ -166,6 +166,11 @@ export const productsApi = {
 
   get: (id: string) => api.get<Product>(`/products/${id}`),
 
+  getAnalysis: (id: string) => api.get(`/products/${id}/analysis`),
+
+  crawlTikTokShop: (limit = 20) =>
+    api.post(`/products/crawl/tiktok-shop`, null, { params: { limit }, timeout: 30000 }),
+
   getSuppliers: (id: string) => api.get<ProductListing[]>(`/products/${id}/suppliers`),
 
   findSuppliers: (id: string) =>

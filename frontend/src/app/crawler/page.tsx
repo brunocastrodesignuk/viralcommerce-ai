@@ -6,7 +6,7 @@ import {
   Play, Square, RefreshCw, Wifi, WifiOff, Clock,
   CheckCircle2, XCircle, Loader2, Hash, Globe,
 } from "lucide-react";
-import { crawlerApi } from "@/lib/api";
+import { crawlerApi, productsApi } from "@/lib/api";
 import toast from "react-hot-toast";
 
 const PLATFORMS = ["tiktok", "instagram", "youtube", "pinterest", "amazon"];
@@ -117,6 +117,17 @@ export default function CrawlerPage() {
       queryClient.invalidateQueries({ queryKey: ["crawler-jobs"] });
     },
     onError: () => toast.error("Failed to start crawler"),
+  });
+
+  const crawlTikTok = useMutation({
+    mutationFn: () => productsApi.crawlTikTokShop(20),
+    onSuccess: (res: any) => {
+      const count = res?.data?.saved ?? res?.data?.products?.length ?? "?";
+      toast.success(`TikTok Shop: ${count} produtos salvos!`);
+      queryClient.invalidateQueries({ queryKey: ["crawler-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: () => toast.error("Falha ao buscar TikTok Shop"),
   });
 
   const scanHashtags = useMutation({
@@ -244,6 +255,18 @@ export default function CrawlerPage() {
               >
                 <Hash className="w-4 h-4" />
                 Scan Hashtags
+              </button>
+              <button
+                onClick={() => crawlTikTok.mutate()}
+                disabled={crawlTikTok.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-pink-700 hover:bg-pink-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                {crawlTikTok.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span>🎵</span>
+                )}
+                TikTok Shop
               </button>
             </div>
           </div>

@@ -67,6 +67,10 @@ services:
         sync: false
       - key: CJ_DROPSHIPPING_API_KEY
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false          # ← Cole sua STRIPE_SECRET_KEY (sk_live_... ou sk_test_...)
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false          # ← Cole após criar webhook em dashboard.stripe.com/webhooks
 
   # ── Redis (Key-Value) ────────────────────────────────────────────────────────
   - type: redis
@@ -90,6 +94,10 @@ services:
         value: https://viralcommerce-api.onrender.com/api/v1
       - key: NODE_ENV
         value: production
+      - key: NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
+        sync: false          # ← Cole o Price ID do plano Pro no Stripe
+      - key: NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID
+        sync: false          # ← Cole o Price ID do plano Enterprise no Stripe
 
 databases:
   # PostgreSQL gratuito (90 dias, depois $7/mo)

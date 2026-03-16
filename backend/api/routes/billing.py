@@ -52,7 +52,7 @@ async def create_checkout_session(
             cancel_url=body.cancel_url,
             metadata={"user_id": str(current_user.id)},
             subscription_data={
-                "trial_period_days": 7,
+                "trial_period_days": 10,   # 10-day free trial
                 "metadata": {"user_id": str(current_user.id)},
             },
         )
