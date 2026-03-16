@@ -20,7 +20,6 @@ from backend.api.schemas.product import (
 )
 from backend.services.supplier.discovery import SupplierDiscoveryService
 from backend.services.marketing.generator import MarketingGeneratorService
-from backend.services.ai.virality import ViralityScorer
 
 router = APIRouter()
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
+import uuid
 
 
 class ProductOut(BaseModel):
@@ -18,11 +18,15 @@ class ProductOut(BaseModel):
     viral_score: Optional[float] = 0.0
     competition_score: Optional[float] = 0.0
     demand_score: Optional[float] = 0.0
-    estimated_price_min: Optional[Decimal] = None
-    estimated_price_max: Optional[Decimal] = None
+    estimated_price_min: Optional[float] = None
+    estimated_price_max: Optional[float] = None
     image_urls: Optional[list] = []
     first_detected_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    @field_serializer("id")
+    def serialize_id(self, v: Any) -> str:
+        return str(v) if v is not None else None
 
 
 class ProductListOut(BaseModel):

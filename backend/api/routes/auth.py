@@ -78,7 +78,7 @@ async def register(body: RegisterBody, db: AsyncSession = Depends(get_db)):
         email=body.email,
         hashed_password=pwd_context.hash(body.password),
         full_name=body.full_name,
-        plan=body.plan,
+        plan="free",  # Always start free — paid plans granted only via Stripe webhook
     )
     db.add(user)
     await db.commit()

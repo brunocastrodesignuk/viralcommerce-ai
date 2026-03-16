@@ -5,7 +5,7 @@ Powered by PostgreSQL (ClickHouse removed — not running on free Render tier).
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, text, desc
+from sqlalchemy import select, func, text, desc, case, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
@@ -88,7 +88,7 @@ async def platform_stats(
             func.count(CrawlerJob.id).label("jobs"),
             func.coalesce(func.sum(CrawlerJob.videos_found), 0).label("videos"),
             func.sum(
-                func.cast(CrawlerJob.status == "failed", type_=None)
+                case((CrawlerJob.status == "failed", 1), else_=0)
             ).label("errors"),
         )
         .where(CrawlerJob.created_at >= cutoff)
