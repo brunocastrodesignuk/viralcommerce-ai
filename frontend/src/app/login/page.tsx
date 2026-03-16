@@ -38,6 +38,9 @@ export default function LoginPage() {
         plan: data.plan ?? "free",
       });
 
+      // Set cookie so Edge middleware can verify auth on SSR navigation
+      document.cookie = `vc_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+
       toast.success("Welcome back!");
       router.push("/");
     } catch (err: any) {

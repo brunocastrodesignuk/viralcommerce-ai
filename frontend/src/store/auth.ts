@@ -29,8 +29,13 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (token, user) =>
         set({ token, user, isAuthenticated: true }),
 
-      logout: () =>
-        set({ token: null, user: null, isAuthenticated: false }),
+      logout: () => {
+        // Clear cookie used by Edge middleware
+        if (typeof document !== "undefined") {
+          document.cookie = "vc_token=; path=/; max-age=0; SameSite=Lax";
+        }
+        set({ token: null, user: null, isAuthenticated: false });
+      },
 
       updateUser: (partial) =>
         set((state) => ({
