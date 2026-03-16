@@ -24,18 +24,17 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // OAuth2 password flow — FastAPI expects form-encoded body
-      const form = new URLSearchParams();
-      form.append("username", email);
-      form.append("password", password);
-
-      const { data } = await api.post("/auth/token", form.toString(), {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      });
+      // JSON login — returns access_token + full user object (with plan)
+      const { data } = await api.post(
+        "/auth/login",
+        { email, password },
+        { timeout: 90000 } // 90s — allows for Render free-tier cold start (~50s)
+      );
 
       setAuth(data.access_token, {
-        email,
-        plan: data.plan ?? "free",
+        email: data.user?.email ?? email,
+        full_name: data.user?.full_name,
+        plan: data.user?.plan ?? "free",
       });
 
       // Set cookie so Edge middleware can verify auth on SSR navigation
@@ -44,9 +43,12 @@ export default function LoginPage() {
       toast.success("Welcome back!");
       router.push("/");
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ?? "Invalid email or password.";
-      setError(msg);
+      if (err?.code === "ECONNABORTED" || err?.message?.includes("timeout")) {
+        setError("Server is waking up, please try again in a few seconds.");
+      } else {
+        const msg = err?.response?.data?.detail ?? "Invalid email or password.";
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
