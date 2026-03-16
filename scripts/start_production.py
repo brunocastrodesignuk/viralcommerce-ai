@@ -7,8 +7,11 @@ Production startup script for Render.com
 """
 import asyncio
 import os
+import random as _rand
 import subprocess
 import sys
+import uuid as _uuid
+from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -57,8 +60,6 @@ async def init_db():
     print("[startup] Database tables ready", flush=True)
 
     # Seed demo data
-    import random as _rand, uuid as _uuid
-    from datetime import timedelta
     from sqlalchemy import select, func
     from backend.models.user import User
     from backend.models.product import Product
@@ -79,7 +80,7 @@ async def init_db():
             await db.commit()
             print("[startup] Demo user created: demo@viralcommerce.ai / Demo1234!", flush=True)
 
-        # Demo products
+        # Demo products (seed only if table is empty)
         prod_count = await db.scalar(select(func.count()).select_from(Product))
         if prod_count == 0:
             DEMO = [
