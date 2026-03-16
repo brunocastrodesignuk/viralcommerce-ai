@@ -198,6 +198,17 @@ async def full_product_analysis(
     - Profit calculator
     - TikTok trend data
     """
+    import traceback, logging as _log
+    try:
+        return await _do_analysis(product_id, db)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _log.getLogger(__name__).error("Analysis 500: %s\n%s", exc, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Analysis error: {type(exc).__name__}: {exc}")
+
+
+async def _do_analysis(product_id: uuid.UUID, db: AsyncSession):
     product = await db.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
