@@ -12,8 +12,9 @@ class User(Base):
     email           = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(Text)
     full_name       = Column(String(255))
-    plan            = Column(String(20), default="free")
-    api_key         = Column(String(64), unique=True, default=lambda: secrets.token_hex(32))
+    plan               = Column(String(20), default="free")
+    stripe_customer_id = Column(String(255), nullable=True, default=None)
+    api_key            = Column(String(64), unique=True, default=lambda: secrets.token_hex(32))
     is_active       = Column(Boolean, default=True)
     created_at      = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at      = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),

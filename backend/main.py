@@ -23,6 +23,7 @@ from backend.api.routes import (
     trends,
     crawler,
     radar,
+    billing,
 )
 
 log = structlog.get_logger()
@@ -92,6 +93,7 @@ def create_app() -> FastAPI:
     app.include_router(trends.router,     prefix=f"{prefix}/trends",     tags=["Trends"])
     app.include_router(crawler.router,    prefix=f"{prefix}/crawler",    tags=["Crawler"])
     app.include_router(radar.router,      prefix=f"{prefix}",            tags=["Trend Radar"])
+    app.include_router(billing.router,    prefix=f"{prefix}/billing",    tags=["Billing"])
 
     @app.get("/health", tags=["Health"])
     async def health():

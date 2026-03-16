@@ -24,18 +24,27 @@ const CATEGORY_COLORS = [
   "#ef4444", "#06b6d4", "#ec4899", "#84cc16",
 ];
 
+const COLOR_MAP: Record<string, { bg: string; text: string }> = {
+  green:  { bg: "bg-green-500/10",  text: "text-green-400" },
+  brand:  { bg: "bg-sky-500/10",    text: "text-sky-400" },
+  purple: { bg: "bg-purple-500/10", text: "text-purple-400" },
+  red:    { bg: "bg-red-500/10",    text: "text-red-400" },
+  amber:  { bg: "bg-amber-500/10",  text: "text-amber-400" },
+};
+
 function StatCard({
   title, value, subtitle, icon: Icon, color = "brand",
 }: {
   title: string; value: string | number; subtitle?: string;
   icon: React.ElementType; color?: string;
 }) {
+  const { bg, text } = COLOR_MAP[color] ?? COLOR_MAP.brand;
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-gray-400">{title}</span>
-        <div className={`p-2 rounded-lg bg-${color}-500/10`}>
-          <Icon className={`w-4 h-4 text-${color}-400`} />
+        <div className={`p-2 rounded-lg ${bg}`}>
+          <Icon className={`w-4 h-4 ${text}`} />
         </div>
       </div>
       <p className="text-2xl font-bold text-white">{value}</p>

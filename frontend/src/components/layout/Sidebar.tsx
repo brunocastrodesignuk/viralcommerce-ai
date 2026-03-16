@@ -12,6 +12,7 @@ import {
   Zap,
   Settings,
   Flame,
+  Crown,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -67,6 +68,18 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="px-3 pb-4 border-t border-gray-800 pt-3">
+        <Link
+          href="/pricing"
+          className={clsx(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            pathname === "/pricing"
+              ? "bg-sky-500/10 text-sky-400 border border-sky-500/20"
+              : "text-gray-400 hover:text-gray-100 hover:bg-gray-800"
+          )}
+        >
+          <Crown className="w-4 h-4" />
+          Pricing
+        </Link>
         <Link
           href="/settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
