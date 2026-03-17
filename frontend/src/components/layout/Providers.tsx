@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
 import { OnboardingModal } from "@/components/modals/OnboardingModal";
+import { usePreferences, applyTheme } from "@/store/preferences";
 
 /** Syncs the Zustand auth token into the axios default headers on mount. */
 function AuthSync() {
@@ -20,6 +21,18 @@ function AuthSync() {
     }
   }, [token]);
 
+  return null;
+}
+
+/**
+ * Applies the saved theme CSS variables on every page mount and whenever
+ * the theme changes — so colors never reset on navigation.
+ */
+function ThemeSync() {
+  const theme = usePreferences((s) => s.theme);
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
   return null;
 }
 
@@ -53,6 +66,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthSync />
+      <ThemeSync />
       <PWARegistrar />
       <OnboardingModal />
       {children}

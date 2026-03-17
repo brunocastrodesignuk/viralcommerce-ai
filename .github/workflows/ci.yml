@@ -64,12 +64,12 @@ jobs:
     needs: lint-python
 
     env:
-      DATABASE_URL: sqlite+aiosqlite:///:memory:
-      REDIS_URL: redis://localhost:6379/0
-      CELERY_BROKER_URL: memory://
-      CELERY_RESULT_BACKEND: cache+memory://
-      SECRET_KEY: ci-test-secret-key-not-for-production
-      ANTHROPIC_API_KEY: sk-ant-test-00000000000000000000000
+      DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+      REDIS_URL: "redis://localhost:6379/0"
+      CELERY_BROKER_URL: "memory://"
+      CELERY_RESULT_BACKEND: "cache+memory://"
+      SECRET_KEY: "ci-test-secret-key-not-for-production"
+      ANTHROPIC_API_KEY: "sk-ant-test-00000000000000000000000"
       ENVIRONMENT: test
 
     steps:
