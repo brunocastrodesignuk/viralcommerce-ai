@@ -6,11 +6,34 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
+    /* ViralCommerce theme tokens (default: dark) */
+    --vc-bg:           #030712;
+    --vc-card:         #111827;
+    --vc-border:       #1f2937;
+    --vc-accent:       #0ea5e9;
+    --vc-accent-hover: #38bdf8;
   }
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
   }
+}
+
+/* Apply theme tokens to layout */
+body {
+  background-color: var(--vc-bg);
+  transition: background-color 0.3s ease;
+}
+
+/* Themed card utility */
+.card-themed {
+  background-color: var(--vc-card);
+  border-color: var(--vc-border);
+}
+
+/* Theme transitions */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 @layer components {

@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsApi, productsApi, trendsApi, crawlerApi } from "@/lib/api";
 import { ViralTimeline } from "@/components/charts/ViralTimeline";
 import { ProductCard } from "@/components/cards/ProductCard";
+import { usePreferences, applyTheme } from "@/store/preferences";
 import {
   TrendingUp, Eye, Zap, DollarSign,
   Activity, Globe, BarChart2, ArrowUpRight, X,
-  Flame, Clock, CheckCircle, Wifi,
+  Flame, Clock, CheckCircle, Wifi, Loader2,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 // ─── Live Feed Panel ──────────────────────────────────────────────────────────
 
@@ -162,6 +164,28 @@ function LiveFeedPanel({ onClose }: { onClose: () => void }) {
 
 export default function DashboardPage() {
   const [showLiveFeed, setShowLiveFeed] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const { theme } = usePreferences();
+
+  // Apply saved theme on mount
+  useEffect(() => { applyTheme(theme); }, [theme]);
+
+  const handleScanNow = async () => {
+    setScanning(true);
+    const toastId = toast.loading("🤖 Iniciando scan em todas as plataformas...");
+    try {
+      const platforms = ["tiktok", "instagram", "youtube"];
+      const results = await Promise.allSettled(
+        platforms.map((p) => crawlerApi.startJob({ platform: p, job_type: "trending" }))
+      );
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      toast.success(`✅ ${ok} plataformas escaneadas! Novos produtos chegando...`, { id: toastId, duration: 4000 });
+    } catch {
+      toast.error("Erro ao iniciar scan. Tente novamente.", { id: toastId });
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const { data: overview } = useQuery({
     queryKey: ["analytics", "overview"],
@@ -210,9 +234,13 @@ export default function DashboardPage() {
               <Activity className="w-4 h-4" />
               Transmissão ao Vivo
             </button>
-            <button className="btn-primary text-sm flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              Escanear Agora
+            <button
+              onClick={handleScanNow}
+              disabled={scanning}
+              className="btn-primary text-sm flex items-center gap-2 disabled:opacity-60"
+            >
+              {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              {scanning ? "Escaneando..." : "Escanear Agora"}
             </button>
           </div>
         </div>
