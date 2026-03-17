@@ -17,22 +17,22 @@ import {
 import { clsx } from "clsx";
 
 const NAV_ITEMS = [
-  { href: "/",              label: "Dashboard",    icon: LayoutDashboard },
-  { href: "/products",      label: "Products",     icon: ShoppingBag },
-  { href: "/trends",        label: "Trend Radar",  icon: TrendingUp },
-  { href: "/suppliers",     label: "Suppliers",    icon: Truck },
-  { href: "/campaigns",     label: "Campaigns",    icon: Megaphone },
-  { href: "/analytics",     label: "Analytics",    icon: BarChart3 },
-  { href: "/crawler",       label: "Crawler",      icon: Zap },
+  { href: "/",              label: "Painel",           icon: LayoutDashboard },
+  { href: "/products",      label: "Produtos",         icon: ShoppingBag },
+  { href: "/trends",        label: "Radar de Tendências", icon: TrendingUp },
+  { href: "/suppliers",     label: "Fornecedores",     icon: Truck },
+  { href: "/campaigns",     label: "Campanhas",        icon: Megaphone },
+  { href: "/analytics",     label: "Análises",         icon: BarChart3 },
+  { href: "/crawler",       label: "Rastreador",       icon: Zap },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col">
+    <aside className="w-64 flex flex-col border-r" style={{ backgroundColor: "var(--vc-card)", borderColor: "var(--vc-border)" }}>
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-800">
+      <div className="h-16 flex items-center px-6 border-b" style={{ borderColor: "var(--vc-border)" }}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-purple-600 rounded-lg flex items-center justify-center">
             <Flame className="w-4 h-4 text-white" />
@@ -67,7 +67,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom */}
-      <div className="px-3 pb-4 border-t border-gray-800 pt-3">
+      <div className="px-3 pb-4 border-t pt-3" style={{ borderColor: "var(--vc-border)" }}>
         <Link
           href="/pricing"
           className={clsx(
@@ -78,18 +78,18 @@ export function Sidebar() {
           )}
         >
           <Crown className="w-4 h-4" />
-          Pricing
+          Preços
         </Link>
         <Link
           href="/settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
         >
           <Settings className="w-4 h-4" />
-          Settings
+          Configurações
         </Link>
         <div className="mt-3 mx-3 p-3 bg-gradient-to-br from-brand-900/50 to-purple-900/30 rounded-lg border border-brand-500/20">
-          <p className="text-xs font-semibold text-brand-400">PRO Plan</p>
-          <p className="text-xs text-gray-400 mt-1">Unlimited products & campaigns</p>
+          <p className="text-xs font-semibold text-brand-400">Plano PRO</p>
+          <p className="text-xs text-gray-400 mt-1">Produtos e campanhas ilimitados</p>
         </div>
       </div>
     </aside>

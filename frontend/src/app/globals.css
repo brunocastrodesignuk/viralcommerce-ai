@@ -38,7 +38,9 @@ body {
 
 @layer components {
   .card {
-    @apply bg-gray-900 rounded-xl border border-gray-800 p-5;
+    background-color: var(--vc-card);
+    border-color: var(--vc-border);
+    @apply rounded-xl border p-5;
   }
 
   .btn-primary {
@@ -58,8 +60,8 @@ body {
   }
 }
 
-/* Scrollbar */
+/* Scrollbar — themed */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #111827; }
-::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+::-webkit-scrollbar-track { background: var(--vc-card); }
+::-webkit-scrollbar-thumb { background: var(--vc-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--vc-accent); }
