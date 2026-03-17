@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 
-const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/viralcommerce-admin"];
+const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/viralcommerce-admin", "/landing", "/docs"];
 
 /**
  * AppShell — conditionally renders the sidebar + topbar.

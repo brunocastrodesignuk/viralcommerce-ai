@@ -13,6 +13,8 @@ import {
   Settings,
   Flame,
   Crown,
+  BookOpen,
+  Globe,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useT } from "@/store/preferences";
@@ -89,6 +91,20 @@ export function Sidebar() {
           <Settings className="w-4 h-4" />
           {t.nav.settings}
         </Link>
+        <Link
+          href="/docs"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          <BookOpen className="w-4 h-4" />
+          Documentação
+        </Link>
+        <a
+          href="/landing"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
+        >
+          <Globe className="w-4 h-4" />
+          Site público
+        </a>
         <div className="mt-3 mx-3 p-3 bg-gradient-to-br from-brand-900/50 to-purple-900/30 rounded-lg border border-brand-500/20">
           <p className="text-xs font-semibold text-brand-400">{t.common.plan} PRO</p>
           <p className="text-xs text-gray-400 mt-1">Produtos e campanhas ilimitados</p>
