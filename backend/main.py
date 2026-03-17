@@ -13,20 +13,22 @@ from prometheus_client import Counter, Histogram, make_asgi_app
 from backend.core.config import settings
 from backend.core.database import close_db, init_db
 from backend.api.routes import (
-    auth,
-    videos,
-    products,
-    suppliers,
-    marketing,
-    campaigns,
-    analytics,
-    trends,
-    crawler,
-    radar,
-    billing,
-    shopify,
-    notifications,
     admin,
+    analytics,
+    auth,
+    billing,
+    campaigns,
+    crawler,
+    marketing,
+    notifications,
+    products,
+    radar,
+    shopify,
+    suppliers,
+    support,
+    trends,
+    videos,
+    whatsapp,
 )
 
 log = structlog.get_logger()
@@ -200,9 +202,11 @@ def create_app() -> FastAPI:
     app.include_router(crawler.router,    prefix=f"{prefix}/crawler",    tags=["Crawler"])
     app.include_router(radar.router,      prefix=f"{prefix}",            tags=["Trend Radar"])
     app.include_router(billing.router,    prefix=f"{prefix}/billing",    tags=["Billing"])
-    app.include_router(shopify.router,        prefix=f"{prefix}/shopify",        tags=["Shopify"])
+    app.include_router(shopify.router,       prefix=f"{prefix}/shopify",        tags=["Shopify"])
     app.include_router(notifications.router, prefix=f"{prefix}/notifications", tags=["Notifications"])
-    app.include_router(admin.router,        prefix=f"{prefix}/admin",        tags=["Admin"])
+    app.include_router(admin.router,         prefix=f"{prefix}/admin",          tags=["Admin"])
+    app.include_router(support.router,       prefix=f"{prefix}/support",        tags=["Support"])
+    app.include_router(whatsapp.router,      prefix=f"{prefix}/whatsapp",       tags=["WhatsApp"])
 
     @app.get("/health", tags=["Health"])
     async def health():

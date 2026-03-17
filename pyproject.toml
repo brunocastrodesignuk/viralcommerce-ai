@@ -20,7 +20,16 @@ markers = [
 line-length = 100
 target-version = "py312"
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
-ignore = ["E501", "B008", "UP007"]
+ignore = [
+  "E501",    # line too long — handled by formatter
+  "B008",    # do not perform function calls in default arguments
+  "UP007",   # use X | Y instead of Optional[X]
+  "B904",    # raise from err — intentional in FastAPI exception handlers
+  "SIM105",  # use contextlib.suppress — try/except/pass is intentional here
+  "SIM117",  # merge nested with statements — readability preference
+  "F841",    # local variable assigned but never used — common in except as e
+  "B007",    # loop control variable not used
+]
 exclude = [
     ".git", "__pycache__", ".venv", "alembic/versions",
     "frontend", "infrastructure",

@@ -2,14 +2,16 @@
 Shopify Integration — import products to user's Shopify store.
 Requires SHOPIFY_STORE_URL and SHOPIFY_ACCESS_TOKEN in user settings or env.
 """
+import uuid as _uuid
+
 import httpx
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.core.database import get_db
 from backend.models.product import Product
-from backend.core.config import settings
-from sqlalchemy import select
 
 router = APIRouter()
 
@@ -28,7 +30,9 @@ class ShopifyTestRequest(BaseModel):
 @router.post("/test-connection")
 async def test_shopify_connection(req: ShopifyTestRequest):
     """Test if Shopify credentials are valid."""
-    url = f"https://{req.shopify_store_url.strip('/')}/admin/api/2024-01/shop.json"
+    store_host = req.shopify_store_url.strip().rstrip("/")
+    store_host = store_host.replace("https://", "").replace("http://", "")
+    url = f"https://{store_host}/admin/api/2024-01/shop.json"
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
@@ -59,16 +63,22 @@ async def test_shopify_connection(req: ShopifyTestRequest):
 @router.post("/import-product")
 async def import_product_to_shopify(req: ShopifyImportRequest, db: AsyncSession = Depends(get_db)):
     """Import a product from ViralCommerce to Shopify."""
-    # Fetch product from DB
-    result = await db.execute(select(Product).where(Product.id == req.product_id))
+    # Fetch product from DB — cast string to UUID for proper comparison
+    try:
+        product_uuid = _uuid.UUID(str(req.product_id))
+    except (ValueError, AttributeError):
+        raise HTTPException(400, "ID de produto inválido")
+
+    result = await db.execute(select(Product).where(Product.id == product_uuid))
     product = result.scalar_one_or_none()
 
     if not product:
         raise HTTPException(404, "Produto não encontrado")
 
-    # Build Shopify product payload
-    price = float(product.estimated_price_max or product.estimated_price_min or 0) * 3  # 3x markup
-    compare_price = price * 1.2  # "was" price
+    # Build Shopify product payload — use max price with 3× markup
+    cost = float(product.estimated_price_max or product.estimated_price_min or 10)
+    price = round(cost * 3, 2)          # 3× markup = ~67% margin
+    compare_price = round(price * 1.2, 2)  # crossed-out "was" price
 
     shopify_product = {
         "product": {
@@ -96,8 +106,11 @@ async def import_product_to_shopify(req: ShopifyImportRequest, db: AsyncSession 
         }
     }
 
+    # Normalise store URL — strip protocol/trailing slashes if user pasted full URL
+    store_host = req.shopify_store_url.strip().rstrip("/")
+    store_host = store_host.replace("https://", "").replace("http://", "")
     # Post to Shopify API
-    url = f"https://{req.shopify_store_url.strip('/')}/admin/api/2024-01/products.json"
+    url = f"https://{store_host}/admin/api/2024-01/products.json"
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
