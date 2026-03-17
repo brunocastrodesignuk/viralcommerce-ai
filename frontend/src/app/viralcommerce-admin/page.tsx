@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Shield, Mail, TrendingUp, Package, Crown,
   Zap, Building2, CheckCircle, XCircle, RefreshCw,
-  Send, Eye, AlertTriangle, Lock, LogOut, Flame,
+  Send, Eye, AlertTriangle, Lock, LogOut, Flame, Copy, Gift,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -411,7 +411,128 @@ function AdminPanel({ adminKey, onLogout }: { adminKey: string; onLogout: () => 
             </div>
           </div>
         </div>
+
+        {/* Coupon Generator */}
+        <CouponGenerator />
       </div>
+    </div>
+  );
+}
+
+// ─── Coupon Generator ─────────────────────────────────────────────────────────
+
+function CouponGenerator() {
+  const PRESETS = [
+    { label: "10% OFF", discount: 10, prefix: "VIRAL10" },
+    { label: "20% OFF", discount: 20, prefix: "VIRAL20" },
+    { label: "30% OFF", discount: 30, prefix: "VIRAL30" },
+    { label: "Lançamento 50%", discount: 50, prefix: "LAUNCH50" },
+    { label: "Black Friday", discount: 40, prefix: "BLACK40" },
+  ];
+
+  const [discount, setDiscount] = useState(20);
+  const [prefix, setPrefix] = useState("VIRAL");
+  const [generated, setGenerated] = useState<{ code: string; discount: number; expires: string }[]>([]);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const generate = () => {
+    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const code = `${prefix}${discount}-${rand}`;
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR");
+    setGenerated(prev => [{ code, discount, expires }, ...prev].slice(0, 20));
+  };
+
+  const copyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopied(code);
+    toast.success(`Cupom ${code} copiado!`);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+      <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+        <Gift className="w-4 h-4 text-purple-400" />
+        Gerador de Cupons de Desconto
+      </h2>
+
+      {/* Presets */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-2">Presets rápidos</label>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => { setDiscount(p.discount); setPrefix(p.prefix.replace(/\d+$/, "")); }}
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs text-gray-300 rounded-lg transition-colors"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Prefixo</label>
+          <input
+            value={prefix}
+            onChange={e => setPrefix(e.target.value.toUpperCase().replace(/\s/g, ""))}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 font-mono focus:outline-none focus:border-purple-500"
+            placeholder="VIRAL"
+            maxLength={12}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">
+            Desconto: <span className="text-purple-400 font-bold">{discount}%</span>
+          </label>
+          <input
+            type="range" min={5} max={70} step={5}
+            value={discount} onChange={e => setDiscount(Number(e.target.value))}
+            className="w-full mt-1.5 accent-purple-500"
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={generate}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold transition-colors"
+      >
+        <Gift className="w-4 h-4" />
+        Gerar Cupom — {discount}% OFF
+      </button>
+
+      {/* Generated codes */}
+      {generated.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">Cupons gerados (sesssão atual)</p>
+          <div className="max-h-48 overflow-y-auto space-y-1.5">
+            {generated.map((c, i) => (
+              <div key={i} className="flex items-center gap-2 p-2.5 bg-gray-800 rounded-lg">
+                <span className="text-sm font-mono font-bold text-purple-400 flex-1">{c.code}</span>
+                <span className="text-xs text-gray-500">{c.discount}% OFF</span>
+                <span className="text-xs text-gray-600">válido até {c.expires}</span>
+                <button
+                  onClick={() => copyCode(c.code)}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    copied === c.code
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-gray-700 hover:bg-gray-600 text-gray-400"
+                  }`}
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-600">
+            ⚠️ Adicione estes cupons manualmente no Stripe ou Mercado Pago para ativá-los.
+            Os cupons acima são apenas referências visuais — configure no painel de pagamentos.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

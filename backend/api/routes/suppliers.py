@@ -230,6 +230,21 @@ _MOCK_SUPPLIERS = [
 ]
 
 
+import re as _re
+
+def _clean_store_url(url: str | None, fallback: str) -> str:
+    """Return a real working store URL — reject obvious placeholder store IDs."""
+    if not url:
+        return fallback
+    # Detect fake placeholder patterns: /store/1234567 or /store/12345678
+    if _re.search(r"/store/\d{5,}", url):
+        return fallback
+    # Detect URLs that are just a bare domain with no path (e.g. aliexpress.com)
+    if _re.match(r"^https?://[^/]+/?$", url):
+        return fallback
+    return url
+
+
 def _serialize_supplier(s: Supplier, listings: list) -> dict:
     """Convert DB Supplier + its listings into the shape the frontend expects."""
     # Use platform homepage URL as fallback if supplier has no specific URL
@@ -241,7 +256,7 @@ def _serialize_supplier(s: Supplier, listings: list) -> dict:
         "rating": float(s.rating) if s.rating else 0,
         "is_verified": s.is_verified,
         "ships_to": s.ships_to or [],
-        "store_url": s.url or fallback_url,   # DB field is `url`; fallback to platform URL
+        "store_url": _clean_store_url(s.url, fallback_url),   # validate: reject fake store IDs
         "listings": [
             {
                 "id": str(lst.id),

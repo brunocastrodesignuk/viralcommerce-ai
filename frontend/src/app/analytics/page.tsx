@@ -264,7 +264,7 @@ export default function AnalyticsPage() {
                 labelStyle={{ color: "#e5e7eb" }}
               />
               <Legend wrapperStyle={{ fontSize: 12, color: "#9ca3af" }} />
-              <Bar dataKey="videos_found" name="Vídeos" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="videos" name="Vídeos" radius={[4, 4, 0, 0]} fill="#0ea5e9">
                 {platformStats.map((entry: any) => (
                   <Cell
                     key={entry.platform}
@@ -272,6 +272,8 @@ export default function AnalyticsPage() {
                   />
                 ))}
               </Bar>
+              <Bar dataKey="products" name="Produtos" radius={[4, 4, 0, 0]} fill="#8b5cf6" />
+              <Bar dataKey="jobs" name="Jobs" radius={[4, 4, 0, 0]} fill="#22c55e" />
             </BarChart>
           </ResponsiveContainer>
         </div>

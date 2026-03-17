@@ -6,9 +6,12 @@ import {
   Key, Globe, Bell, Shield, ChevronRight,
   Eye, EyeOff, Check, Copy, RefreshCw, Loader2,
   Paintbrush, Languages, DollarSign, ShoppingBag, Link2,
+  Share2, Rocket, Gift,
 } from "lucide-react";
+import { ReopenOnboardingButton } from "@/components/modals/OnboardingModal";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/store/auth";
 import {
   usePreferences, applyTheme, useT,
   THEMES, LANGUAGES, CURRENCIES,
@@ -246,6 +249,115 @@ function ShopifyConnectionSection() {
           {testMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
           Conectar Shopify
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Affiliate Link Section ───────────────────────────────────────────────────
+
+function AffiliateSection() {
+  const { user } = useAuthStore();
+  const [copied, setCopied] = useState(false);
+
+  // Generate a deterministic referral code from the user's id/email
+  const refCode = user
+    ? "VC-" + (user.email || "").split("@")[0].toUpperCase().slice(0, 6).replace(/[^A-Z0-9]/g, "X") + Math.abs((user.email || "").split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 9000 + 1000)
+    : "VC-XXXXXX1234";
+
+  const refLink = `https://viralcommerce-frontend.onrender.com/register?ref=${refCode}`;
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(refLink);
+    setCopied(true);
+    toast.success("Link de afiliado copiado! 🎉");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-800">
+        <div className="p-2 bg-green-500/10 rounded-lg">
+          <Share2 className="w-4 h-4 text-green-400" />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-sm font-semibold text-white">Programa de Afiliados</h2>
+          <p className="text-xs text-gray-500">Ganhe 30% de comissão recorrente por cada indicação</p>
+        </div>
+        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-medium">
+          30% / mês
+        </span>
+      </div>
+      <div className="p-5 space-y-4">
+        {/* Potential earnings */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { ref: "1 indicação", val: "R$14/mês" },
+            { ref: "5 indicações", val: "R$70/mês" },
+            { ref: "20 indicações", val: "R$282/mês" },
+          ].map((item) => (
+            <div key={item.ref} className="bg-gray-800 rounded-xl p-3 text-center">
+              <p className="text-sm font-bold text-green-400">{item.val}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{item.ref}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Referral code */}
+        <div>
+          <label className="block text-xs text-gray-400 mb-1.5">Seu código de afiliado</label>
+          <div className="flex gap-2">
+            <input
+              readOnly value={refCode}
+              className="w-32 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-sky-400 font-mono font-bold focus:outline-none text-center"
+            />
+          </div>
+        </div>
+
+        {/* Referral link */}
+        <div>
+          <label className="block text-xs text-gray-400 mb-1.5">Seu link de afiliado</label>
+          <div className="flex gap-2">
+            <input
+              readOnly value={refLink}
+              className="flex-1 px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-300 font-mono focus:outline-none"
+            />
+            <button
+              onClick={copyLink}
+              className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                copied
+                  ? "bg-green-600 text-white"
+                  : "bg-sky-600 hover:bg-sky-500 text-white"
+              }`}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? "Copiado!" : "Copiar"}
+            </button>
+          </div>
+        </div>
+
+        {/* Share buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`🚀 Descubra produtos virais com IA e comece a vender hoje! Acesse pelo meu link: ${refLink}`)}`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 bg-green-700/30 hover:bg-green-700/50 border border-green-700/40 text-green-400 rounded-lg text-xs font-medium transition-colors"
+          >
+            💬 Compartilhar no WhatsApp
+          </a>
+          <a
+            href={`https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("🔥 ViralCommerce AI — descubra produtos virais e venda mais!")}`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 bg-sky-700/30 hover:bg-sky-700/50 border border-sky-700/40 text-sky-400 rounded-lg text-xs font-medium transition-colors"
+          >
+            ✈️ Telegram
+          </a>
+        </div>
+
+        <p className="text-xs text-gray-600">
+          Comissões são creditadas automaticamente após 30 dias da assinatura do indicado.
+          Entre em contato via WhatsApp para resgatar seus ganhos.
+        </p>
       </div>
     </div>
   );
@@ -539,6 +651,25 @@ export default function SettingsPage() {
 
       {/* ── SHOPIFY ── */}
       <ShopifyConnectionSection />
+
+      {/* ── LINK DE AFILIADO ── */}
+      <AffiliateSection />
+
+      {/* ── GUIA DE INÍCIO ── */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-800">
+          <div className="p-2 bg-sky-500/10 rounded-lg">
+            <Rocket className="w-4 h-4 text-sky-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white">Guia de Início</h2>
+            <p className="text-xs text-gray-500">Reveja o tutorial de como começar a vender</p>
+          </div>
+        </div>
+        <div className="p-5">
+          <ReopenOnboardingButton />
+        </div>
+      </div>
 
       {/* ── ZONA DE PERIGO ── */}
       <div className="bg-gray-900 border border-red-900/50 rounded-xl overflow-hidden">
