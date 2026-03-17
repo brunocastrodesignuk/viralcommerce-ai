@@ -26,6 +26,23 @@ TRACKED_HASHTAGS = [
 ]
 
 
+@router.get("/")
+async def trends_index(
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Base trends endpoint — returns top hashtags."""
+    result = await db.scalars(
+        select(Hashtag)
+        .order_by(desc(Hashtag.trend_velocity))
+        .limit(limit)
+    )
+    hashtags = result.all()
+    if not hashtags:
+        return {"hashtags": TRACKED_HASHTAGS, "count": len(TRACKED_HASHTAGS)}
+    return {"hashtags": [h.tag for h in hashtags], "count": len(hashtags)}
+
+
 @router.get("/hashtags")
 async def list_hashtags(
     platform: Optional[str] = None,

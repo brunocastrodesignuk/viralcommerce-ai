@@ -17,6 +17,7 @@ router = APIRouter()
 
 
 @router.get("/overview")
+@router.get("/dashboard")
 async def dashboard_overview(db: AsyncSession = Depends(get_db)):
     """Main dashboard KPIs — aggregated from PostgreSQL."""
     cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
@@ -233,6 +234,7 @@ async def category_breakdown(
     ]
 
 
+@router.get("/ad-performance")
 @router.get("/ad-performance-summary")
 async def ad_performance_summary(db: AsyncSession = Depends(get_db)):
     """
