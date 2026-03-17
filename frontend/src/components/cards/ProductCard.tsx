@@ -76,10 +76,11 @@ export function ProductCard({
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              // Fallback to category-based loremflickr if image fails
+              // Fallback to picsum.photos (reliable CDN) if original image fails
               const target = e.currentTarget;
-              const seed = Math.abs(product.name.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % 9999;
-              target.src = `https://loremflickr.com/400/400/product,shop?lock=${seed}`;
+              const seed = Math.abs(product.name.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % 200;
+              target.src = `https://picsum.photos/seed/${seed}/400/400`;
+              target.onerror = null; // prevent infinite error loop
             }}
           />
         ) : (

@@ -5,20 +5,20 @@ import { useState, useEffect } from "react";
 import {
   Zap, TrendingUp, Target, BarChart2, Search, ShoppingBag,
   Star, ArrowRight, Check, ChevronDown, Play, Globe, Shield,
-  Sparkles, Package, Users, DollarSign, Clock, Eye,
+  Sparkles, Users, DollarSign, Clock, Eye,
 } from "lucide-react";
 
 // ─── Demo product ticker ────────────────────────────────────────────────────
 
 const DEMO_PRODUCTS = [
-  { name: "Máscara LED Facial", score: 97, revenue: "R$28.400" },
-  { name: "Organizador Magnético", score: 94, revenue: "R$19.200" },
-  { name: "Óculos Anti-Luz Azul", score: 91, revenue: "R$35.700" },
-  { name: "Gel Snail Mucin", score: 89, revenue: "R$22.100" },
-  { name: "Slippers Cloud", score: 88, revenue: "R$41.300" },
-  { name: "Gua Sha Cristal", score: 95, revenue: "R$17.500" },
-  { name: "Lip Treatment", score: 93, revenue: "R$26.900" },
-  { name: "Massageador Pescoço", score: 90, revenue: "R$31.200" },
+  { name: "Máscara LED Facial",    score: 97, revenue: "R$28.400", img: "https://picsum.photos/seed/200/400/400" },
+  { name: "Organizador Magnético", score: 94, revenue: "R$19.200", img: "https://picsum.photos/seed/350/400/400" },
+  { name: "Óculos Anti-Luz Azul",  score: 91, revenue: "R$35.700", img: "https://picsum.photos/seed/3/400/400"   },
+  { name: "Gel Snail Mucin",       score: 89, revenue: "R$22.100", img: "https://picsum.photos/seed/203/400/400" },
+  { name: "Slippers Cloud",        score: 88, revenue: "R$41.300", img: "https://picsum.photos/seed/433/400/400" },
+  { name: "Gua Sha Cristal",       score: 95, revenue: "R$17.500", img: "https://picsum.photos/seed/201/400/400" },
+  { name: "Lip Treatment",         score: 93, revenue: "R$26.900", img: "https://picsum.photos/seed/473/400/400" },
+  { name: "Massageador Pescoço",   score: 90, revenue: "R$31.200", img: "https://picsum.photos/seed/247/400/400" },
 ];
 
 const FEATURES = [
@@ -248,12 +248,20 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 bg-gray-800 rounded-md h-6 mx-4" />
               </div>
-              {/* Fake product grid */}
+              {/* Product grid with real images */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {DEMO_PRODUCTS.slice(0, 4).map((p, i) => (
                   <div key={i} className="bg-gray-800 rounded-xl overflow-hidden">
-                    <div className="h-24 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center">
-                      <Package className="w-8 h-8 text-gray-600" />
+                    <div className="h-24 relative overflow-hidden">
+                      <img
+                        src={p.img}
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-1 right-1 bg-sky-500/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {p.score}%
+                      </div>
                     </div>
                     <div className="p-2">
                       <p className="text-xs text-gray-300 font-medium truncate">{p.name}</p>

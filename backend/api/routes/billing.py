@@ -339,7 +339,8 @@ async def payment_config():
     mp_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
     stripe_configured = bool(stripe_key)
     mp_configured = bool(mp_token)
-    whatsapp = os.getenv("SUPPORT_WHATSAPP", "")
+    # Fallback number so WhatsApp redirect works even before env var is set on Render
+    whatsapp = os.getenv("SUPPORT_WHATSAPP", "447470361422")
 
     # When Stripe is configured, automatic_payment_methods enables all of these
     stripe_methods = (

@@ -76,27 +76,34 @@ async def _startup_data_refresh():
                 # 1. Refresh missing product images
                 result = await db.scalars(select(Product).where(Product.status == "active"))
                 products = result.all()
-                CATEGORY_IMAGE_KEYS = {
-                    "Beauty & Personal Care": "beauty,skincare,cosmetics",
-                    "Electronics": "electronics,gadget,technology",
-                    "Home & Kitchen": "home,kitchen,decor",
-                    "Clothing & Accessories": "fashion,clothing,accessories",
-                    "Sports & Outdoors": "sports,fitness,exercise",
-                    "Health & Wellness": "health,wellness,medicine",
-                    "Toys & Games": "toys,children,play",
+                # picsum.photos is far more reliable than loremflickr —
+                # it's always up, CDN-backed, and returns consistent quality images.
+                # We use a deterministic seed so the same product always gets
+                # the same image across restarts.
+                CATEGORY_SEEDS = {
+                    "Beauty & Personal Care": [200, 201, 203, 339, 399, 445, 473, 487],
+                    "Electronics":            [0, 3, 20, 48, 119, 160, 180, 215],
+                    "Home & Kitchen":         [101, 214, 237, 284, 349, 350, 356, 380],
+                    "Clothing & Accessories": [64, 75, 174, 192, 219, 258, 292, 326],
+                    "Sports & Outdoors":      [416, 428, 433, 461, 531, 547, 571, 593],
+                    "Health & Wellness":      [236, 247, 279, 303, 315, 331, 337, 407],
+                    "Toys & Games":           [191, 249, 268, 305, 360, 371, 395, 412],
                 }
+                DEFAULT_SEEDS = [1, 10, 15, 28, 42, 55, 67, 84]
                 updated = 0
                 for p in products:
                     has_good_image = (
                         p.image_urls and p.image_urls != [] and p.image_urls != [""]
                         and not any("via.placeholder.com" in u for u in p.image_urls)
                         and not any("placehold.co" in u for u in p.image_urls)
+                        and not any("loremflickr.com" in u for u in p.image_urls)
                     )
                     if has_good_image:
                         continue
-                    keyword = CATEGORY_IMAGE_KEYS.get(p.category, "product,shop,retail")
-                    seed = abs(hash(p.name or "product")) % 9999
-                    p.image_urls = [f"https://loremflickr.com/400/400/{keyword}?lock={seed}"]
+                    seeds = CATEGORY_SEEDS.get(p.category or "", DEFAULT_SEEDS)
+                    name_hash = abs(hash(p.name or "product"))
+                    img_seed = seeds[name_hash % len(seeds)]
+                    p.image_urls = [f"https://picsum.photos/seed/{img_seed}/400/400"]
                     updated += 1
                 if updated:
                     await db.commit()
