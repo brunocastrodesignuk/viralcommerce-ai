@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { usePreferences, convertPrice } from "@/store/preferences";
 
 const PLANS = [
   {
@@ -43,7 +44,7 @@ const PLANS = [
       "Descoberta automática de fornecedores",
       "Suporte prioritário",
     ],
-    cta: "Assinar Pro — R$47/mês",
+    cta: "Assinar Pro",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? "price_pro",
     popular: true,
   },
@@ -72,11 +73,12 @@ const PLANS = [
 export default function PricingPage() {
   const { isAuthenticated, user } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
+  const { currency } = usePreferences();
 
   const handleSubscribe = async (plan: typeof PLANS[0]) => {
     if (!plan.priceId || plan.id === "free") {
       if (!isAuthenticated) window.location.href = "/register";
-      else toast.success("You are already on the Free plan!");
+      else toast.success("Você já está no plano Gratuito!");
       return;
     }
 
@@ -100,7 +102,7 @@ export default function PricingPage() {
       });
       window.location.href = data.checkout_url;
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail ?? "Failed to start checkout. Try again.");
+      toast.error(err?.response?.data?.detail ?? "Falha ao iniciar checkout. Tente novamente.");
     } finally {
       setLoading(null);
     }
@@ -161,7 +163,9 @@ export default function PricingPage() {
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-end gap-1">
-                    <span className="text-4xl font-bold text-white">${plan.price}</span>
+                    <span className="text-4xl font-bold text-white">
+                      {plan.price === 0 ? "Grátis" : convertPrice(plan.price, currency)}
+                    </span>
                     {plan.price > 0 && (
                       <span className="text-gray-500 mb-1.5">/{plan.interval}</span>
                     )}

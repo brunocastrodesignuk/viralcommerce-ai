@@ -166,7 +166,63 @@ _MOCK_SUPPLIERS = [
             },
         ],
     },
+    {
+        "id": "sup-007",
+        "platform": "amazon",
+        "name": "Amazon — Programa de Afiliados (Associates)",
+        "rating": 4.9,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "UK", "DE", "FR", "IT", "ES", "JP", "AU", "BR"],
+        "store_url": "https://affiliate-program.amazon.com",
+        "commission_model": True,
+        "commission_rate_pct": 10.0,
+        "listings": [
+            {
+                "id": "lst-018", "product_name": "Trending Gadgets & Electronics",
+                "cost_price": 0, "shipping_cost": 0, "moq": 0,
+                "profit_margin_pct": 10.0, "lead_time_days": 0,
+                "note": "Comissão de afiliado — sem custo de estoque",
+            },
+            {
+                "id": "lst-019", "product_name": "Beleza & Cuidados Pessoais",
+                "cost_price": 0, "shipping_cost": 0, "moq": 0,
+                "profit_margin_pct": 10.0, "lead_time_days": 0,
+                "note": "Comissão de afiliado — sem custo de estoque",
+            },
+            {
+                "id": "lst-020", "product_name": "Casa, Cozinha & Esportes",
+                "cost_price": 0, "shipping_cost": 0, "moq": 0,
+                "profit_margin_pct": 8.0, "lead_time_days": 0,
+                "note": "Comissão de afiliado — sem custo de estoque",
+            },
+        ],
+    },
 ]
+
+
+def _serialize_supplier(s: Supplier, listings: list) -> dict:
+    """Convert DB Supplier + its listings into the shape the frontend expects."""
+    return {
+        "id": str(s.id),
+        "platform": s.platform,
+        "name": s.name,
+        "rating": float(s.rating) if s.rating else 0,
+        "is_verified": s.is_verified,
+        "ships_to": s.ships_to or [],
+        "store_url": s.url,          # DB field is `url`; frontend expects `store_url`
+        "listings": [
+            {
+                "id": str(lst.id),
+                "product_name": lst.supplier_sku or "Produto do Fornecedor",
+                "cost_price": float(lst.cost_price),
+                "shipping_cost": float(lst.shipping_cost or 0),
+                "moq": lst.moq or 1,
+                "profit_margin_pct": float(lst.profit_margin_pct or 0),
+                "lead_time_days": lst.shipping_days_max or 14,
+            }
+            for lst in listings
+        ],
+    }
 
 
 @router.get("/")
@@ -182,7 +238,17 @@ async def list_suppliers(
     suppliers = result.all()
 
     if suppliers:
-        return suppliers
+        # Fetch listings for each supplier and serialize properly
+        out = []
+        for s in suppliers:
+            listings_result = await db.scalars(
+                select(ProductListing)
+                .where(ProductListing.supplier_id == s.id)
+                .order_by(desc(ProductListing.profit_margin_pct))
+                .limit(5)
+            )
+            out.append(_serialize_supplier(s, list(listings_result.all())))
+        return out
 
     # ── Fallback: return rich mock supplier data ──────────────────────────
     mock = _MOCK_SUPPLIERS

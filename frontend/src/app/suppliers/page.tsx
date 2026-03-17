@@ -14,6 +14,7 @@ const PLATFORM_BADGES: Record<string, { label: string; color: string }> = {
   alibaba:        { label: "Alibaba",         color: "text-orange-400 bg-orange-400/10" },
   cj_dropshipping:{ label: "CJ Dropshipping", color: "text-green-400 bg-green-400/10" },
   temu:           { label: "Temu",            color: "text-purple-400 bg-purple-400/10" },
+  amazon:         { label: "Amazon Afiliados", color: "text-amber-400 bg-amber-400/10" },
 };
 
 function ProfitBadge({ margin }: { margin: number }) {
@@ -68,23 +69,29 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
             >
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-gray-400 truncate">{listing.product_name}</p>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                  <span className="text-sm font-semibold text-white">
-                    {convertPrice(Number(listing.cost_price), currency)}
-                  </span>
-                  {listing.shipping_cost > 0 && (
-                    <span className="text-xs text-gray-500">
-                      +{convertPrice(Number(listing.shipping_cost), currency)} frete
+                {listing.note ? (
+                  <p className="text-xs text-amber-400 mt-1">{listing.note}</p>
+                ) : (
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="text-sm font-semibold text-white">
+                      {Number(listing.cost_price) > 0 ? convertPrice(Number(listing.cost_price), currency) : "Sem custo"}
                     </span>
-                  )}
-                  <span className="text-xs text-gray-500">MOQ {listing.moq}</span>
-                </div>
+                    {listing.shipping_cost > 0 && (
+                      <span className="text-xs text-gray-500">
+                        +{convertPrice(Number(listing.shipping_cost), currency)} frete
+                      </span>
+                    )}
+                    {listing.moq > 0 && <span className="text-xs text-gray-500">MOQ {listing.moq}</span>}
+                  </div>
+                )}
               </div>
               <div className="text-right flex-shrink-0">
                 <ProfitBadge margin={Number(listing.profit_margin_pct ?? 0)} />
-                <p className="text-xs text-gray-500 mt-1">
-                  {listing.lead_time_days}d prazo
-                </p>
+                {Number(listing.lead_time_days) > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {listing.lead_time_days}d prazo
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -108,7 +115,8 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
           >
-            Ver Loja <ExternalLink className="w-3 h-3" />
+            {supplier.platform === "amazon" ? "Cadastrar Afiliado" : "Ver Loja"}
+            <ExternalLink className="w-3 h-3" />
           </a>
         )}
       </div>
@@ -177,6 +185,7 @@ export default function SuppliersPage() {
           <option value="alibaba">Alibaba</option>
           <option value="cj_dropshipping">CJ Dropshipping</option>
           <option value="temu">Temu</option>
+          <option value="amazon">Amazon Afiliados</option>
         </select>
 
         {/* Margin filter */}
