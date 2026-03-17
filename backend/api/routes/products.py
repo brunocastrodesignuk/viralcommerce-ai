@@ -55,6 +55,36 @@ async def list_products(
     return {"total": total, "page": page, "limit": limit, "items": products.all()}
 
 
+@router.post("/refresh-images")
+async def refresh_product_images(db: AsyncSession = Depends(get_db)):
+    """Batch-update all products with missing image_urls using placehold.co placeholders."""
+    CATEGORY_COLORS = {
+        "Beauty & Personal Care": ("1e1b4b", "a78bfa", "beauty"),
+        "Electronics": ("0f172a", "38bdf8", "tech"),
+        "Home & Kitchen": ("14532d", "86efac", "home"),
+        "Clothing & Accessories": ("4c0519", "fda4af", "fashion"),
+        "Sports & Outdoors": ("1c1917", "fdba74", "sports"),
+        "Health & Wellness": ("052e16", "6ee7b7", "health"),
+        "Toys & Games": ("1e1b4b", "fbbf24", "toys"),
+    }
+    result = await db.scalars(
+        select(Product).where(Product.status == "active")
+    )
+    products = result.all()
+    updated = 0
+    for p in products:
+        if p.image_urls and p.image_urls != [] and p.image_urls != [""]:
+            continue
+        bg, fg, hint = CATEGORY_COLORS.get(p.category, ("0f172a", "38bdf8", "product"))
+        # Build a short text hint from the product name
+        words = (p.name or hint).split()[:2]
+        text = "+".join(w[:6] for w in words) if words else hint
+        p.image_urls = [f"https://placehold.co/400x400/{bg}/{fg}?text={text}"]
+        updated += 1
+    await db.commit()
+    return {"updated": updated, "total": len(products)}
+
+
 @router.get("/trending", response_model=list[ProductOut])
 async def trending_products(
     hours: int = Query(24, ge=1, le=168),
