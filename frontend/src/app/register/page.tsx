@@ -57,7 +57,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [plan, setPlan] = useState<"free" | "pro">("free");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -72,18 +71,27 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await api.post("/auth/register", { email, password, full_name: fullName, plan });
-
-      // Auto-login
-      const form = new URLSearchParams();
-      form.append("username", email);
-      form.append("password", password);
-      const { data } = await api.post("/auth/token", form.toString(), {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      // /register already returns { access_token, email, plan } — use it directly.
+      // The backend ALWAYS sets plan="free" for new accounts; paid plans are granted
+      // only via Stripe/Mercado Pago webhook after confirmed payment.
+      const { data } = await api.post("/auth/register", {
+        email,
+        password,
+        full_name: fullName,
+        // never send plan — backend ignores it and always enforces "free"
       });
 
-      setAuth(data.access_token, { email, plan });
-      toast.success("Account created! Welcome to ViralCommerce 🚀");
+      // Use the BACKEND-returned plan — never the UI selection
+      setAuth(data.access_token, {
+        email: data.email ?? email,
+        plan: data.plan ?? "free",
+        full_name: fullName,
+      });
+
+      // Set cookie so Edge middleware can verify auth on SSR navigation
+      document.cookie = `vc_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+
+      toast.success("Conta criada! Bem-vindo ao ViralCommerce 🚀");
       router.push("/");
     } catch (err: any) {
       const msg =
@@ -171,34 +179,14 @@ export default function RegisterPage() {
               <PasswordStrength password={password} />
             </div>
 
-            {/* Plan selection */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-2">Plan</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: "free", label: "Free", desc: "10 products/mo", price: "$0" },
-                  { value: "pro", label: "Pro", desc: "Unlimited + AI ads", price: "$49/mo" },
-                ].map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setPlan(p.value as "free" | "pro")}
-                    className={`text-left p-4 rounded-xl border transition-all ${
-                      plan === p.value
-                        ? "border-brand-500 bg-brand-500/10"
-                        : "border-gray-700 bg-gray-800 hover:border-gray-600"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-white">{p.label}</span>
-                      <span className={`text-xs font-bold ${plan === p.value ? "text-brand-400" : "text-gray-500"}`}>
-                        {p.price}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">{p.desc}</p>
-                  </button>
-                ))}
-              </div>
+            {/* Free tier info — paid upgrade via /pricing after registration */}
+            <div className="p-3 bg-gray-800/60 rounded-xl border border-gray-700/50 text-xs text-gray-500 flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>
+                Comece <strong className="text-gray-300">grátis</strong> — 10 produtos/mês incluídos.
+                Faça upgrade para Pro (R$47/mês) ou Enterprise (R$197/mês) a qualquer momento em{" "}
+                <Link href="/pricing" className="text-brand-400 hover:underline">Planos & Preços</Link>.
+              </span>
             </div>
 
             <button

@@ -19,10 +19,13 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useT } from "@/store/preferences";
+import { useAuthStore } from "@/store/auth";
 
 export function Sidebar() {
   const pathname = usePathname();
   const t = useT();
+  const user = useAuthStore((s) => s.user);
+  const plan = user?.plan ?? "free";
 
   const NAV_ITEMS = [
     { href: "/",           label: t.nav.dashboard,  icon: LayoutDashboard },
@@ -109,10 +112,25 @@ export function Sidebar() {
           <Globe className="w-4 h-4" />
           Site público
         </a>
-        <div className="mt-3 mx-3 p-3 bg-gradient-to-br from-brand-900/50 to-purple-900/30 rounded-lg border border-brand-500/20">
-          <p className="text-xs font-semibold text-brand-400">{t.common.plan} PRO</p>
-          <p className="text-xs text-gray-400 mt-1">Produtos e campanhas ilimitados</p>
-        </div>
+        {plan === "free" ? (
+          <Link
+            href="/pricing"
+            className="mt-3 mx-3 block p-3 bg-gradient-to-br from-gray-800/80 to-gray-900/60 rounded-lg border border-gray-700/50 hover:border-brand-500/30 transition-colors"
+          >
+            <p className="text-xs font-semibold text-gray-400">{t.common.plan} FREE</p>
+            <p className="text-xs text-brand-400 mt-1">👑 Upgrade para Pro →</p>
+          </Link>
+        ) : plan === "enterprise" ? (
+          <div className="mt-3 mx-3 p-3 bg-gradient-to-br from-purple-900/50 to-brand-900/30 rounded-lg border border-purple-500/20">
+            <p className="text-xs font-semibold text-purple-400">{t.common.plan} ENTERPRISE</p>
+            <p className="text-xs text-gray-400 mt-1">Acesso total + suporte prioritário</p>
+          </div>
+        ) : (
+          <div className="mt-3 mx-3 p-3 bg-gradient-to-br from-brand-900/50 to-purple-900/30 rounded-lg border border-brand-500/20">
+            <p className="text-xs font-semibold text-brand-400">{t.common.plan} PRO</p>
+            <p className="text-xs text-gray-400 mt-1">Produtos e campanhas ilimitados</p>
+          </div>
+        )}
       </div>
     </aside>
   );
