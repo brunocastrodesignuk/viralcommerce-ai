@@ -73,7 +73,13 @@ async def refresh_product_images(db: AsyncSession = Depends(get_db)):
     products = result.all()
     updated = 0
     for p in products:
-        if p.image_urls and p.image_urls != [] and p.image_urls != [""]:
+        has_good_image = (
+            p.image_urls
+            and p.image_urls != []
+            and p.image_urls != [""]
+            and not any("via.placeholder.com" in url for url in p.image_urls)
+        )
+        if has_good_image:
             continue
         bg, fg, hint = CATEGORY_COLORS.get(p.category, ("0f172a", "38bdf8", "product"))
         # Build a short text hint from the product name

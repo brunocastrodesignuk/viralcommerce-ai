@@ -105,9 +105,15 @@ async def _save_products(raw: list, db: AsyncSession) -> int:
 
         existing = await db.scalar(select(Product).where(Product.name == name))
 
-        # If product exists but has no images, update image URL
+        # If product exists but has no images or only broken via.placeholder.com, update
         if existing:
-            if not existing.image_urls or existing.image_urls == [] or existing.image_urls == [""]:
+            broken = (
+                not existing.image_urls
+                or existing.image_urls == []
+                or existing.image_urls == [""]
+                or any("via.placeholder.com" in url for url in existing.image_urls)
+            )
+            if broken:
                 img_url = p.get("image_url", "")
                 if img_url:
                     existing.image_urls = [img_url]
