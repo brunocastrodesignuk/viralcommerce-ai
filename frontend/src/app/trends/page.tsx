@@ -3,8 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { trendsApi } from "@/lib/api";
 import { TrendingUp, Hash, Zap } from "lucide-react";
+import { useT } from "@/store/preferences";
 
 export default function TrendsPage() {
+  const t = useT();
   const { data: hashtags } = useQuery({
     queryKey: ["trends", "hashtags"],
     queryFn: () => trendsApi.topHashtags(50).then((r) => r.data),
@@ -20,8 +22,8 @@ export default function TrendsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Radar de Tendências</h1>
-        <p className="text-sm text-gray-400">Monitoramento de hashtags e tendências de produtos em tempo real</p>
+        <h1 className="text-2xl font-bold text-white">{t.trends.title}</h1>
+        <p className="text-sm text-gray-400">{t.trends.subtitle}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -29,7 +31,7 @@ export default function TrendsPage() {
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Hash className="w-4 h-4 text-brand-400" />
-            <h2 className="font-semibold text-gray-100">Hashtags Mais Populares</h2>
+            <h2 className="font-semibold text-gray-100">{t.trends.topHashtags}</h2>
           </div>
           <div className="space-y-3">
             {(hashtags as any[] ?? []).map((h: any, i: number) => (
@@ -54,7 +56,7 @@ export default function TrendsPage() {
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-4 h-4 text-amber-400" />
-            <h2 className="font-semibold text-gray-100">Crescimento Mais Rápido (24h)</h2>
+            <h2 className="font-semibold text-gray-100">{t.trends.fastestGrowing}</h2>
           </div>
           <div className="space-y-3">
             {(velocity as any[] ?? []).slice(0, 15).map((h: any, i: number) => (

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { crawlerApi, productsApi } from "@/lib/api";
 import toast from "react-hot-toast";
+import { useT } from "@/store/preferences";
 
 const PLATFORMS = ["tiktok", "instagram", "youtube", "pinterest", "amazon"];
 const JOB_TYPES = ["trending", "hashtag_scan", "product_search", "profile"];
@@ -107,6 +108,7 @@ export default function CrawlerPage() {
   const [platform, setPlatform] = useState("tiktok");
   const [jobType, setJobType]   = useState("trending");
   const [target, setTarget]     = useState("");
+  const t = useT();
 
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["crawler-jobs"],
@@ -158,9 +160,9 @@ export default function CrawlerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Monitor de Rastreadores</h1>
+          <h1 className="text-2xl font-bold text-white">{t.crawler.title}</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Controle e monitore todos os rastreadores de plataformas
+            {t.crawler.subtitle}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -172,7 +174,7 @@ export default function CrawlerPage() {
           ) : (
             <span className="flex items-center gap-2 text-sm text-gray-500">
               <span className="w-2 h-2 rounded-full bg-gray-600" />
-              Inativo
+              {t.common.inactive}
             </span>
           )}
         </div>
@@ -182,10 +184,10 @@ export default function CrawlerPage() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total de Jobs",  value: stats.total_jobs?.toLocaleString("pt-BR") ?? 0,          color: "text-white" },
-            { label: "Concluídos",     value: stats.completed_jobs?.toLocaleString("pt-BR") ?? 0,      color: "text-green-400" },
-            { label: "Com Falha",      value: stats.failed_jobs?.toLocaleString("pt-BR") ?? 0,         color: "text-red-400" },
-            { label: "Vídeos Encontrados", value: stats.total_videos_found?.toLocaleString("pt-BR") ?? 0, color: "text-brand-400" },
+            { label: t.crawler.totalJobs,   value: stats.total_jobs?.toLocaleString("pt-BR") ?? 0,           color: "text-white" },
+            { label: t.crawler.completed,   value: stats.completed_jobs?.toLocaleString("pt-BR") ?? 0,       color: "text-green-400" },
+            { label: t.crawler.failed,      value: stats.failed_jobs?.toLocaleString("pt-BR") ?? 0,          color: "text-red-400" },
+            { label: t.crawler.videosFound, value: stats.total_videos_found?.toLocaleString("pt-BR") ?? 0,   color: "text-brand-400" },
           ].map((stat) => (
             <div key={stat.label} className="card">
               <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
@@ -198,12 +200,12 @@ export default function CrawlerPage() {
       {/* Controls */}
       <div className="card">
         <h2 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
-          <Play className="w-4 h-4" /> Iniciar Rastreador
+          <Play className="w-4 h-4" /> {t.crawler.startCrawler}
         </h2>
         <div className="flex flex-wrap gap-3">
           {/* Platform */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Plataforma</label>
+            <label className="text-xs text-gray-500">{t.crawler.platform}</label>
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
@@ -219,24 +221,24 @@ export default function CrawlerPage() {
 
           {/* Job Type */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Tipo de Job</label>
+            <label className="text-xs text-gray-500">{t.crawler.jobType}</label>
             <select
               value={jobType}
               onChange={(e) => setJobType(e.target.value)}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 focus:outline-none focus:border-brand-500"
             >
-              {JOB_TYPES.map((t) => (
-                <option key={t} value={t}>{JOB_TYPE_PT[t] ?? t}</option>
+              {JOB_TYPES.map((jt) => (
+                <option key={jt} value={jt}>{JOB_TYPE_PT[jt] ?? jt}</option>
               ))}
             </select>
           </div>
 
           {/* Target */}
           <div className="flex flex-col gap-1 flex-1 min-w-40">
-            <label className="text-xs text-gray-500">Alvo (opcional)</label>
+            <label className="text-xs text-gray-500">{t.crawler.target}</label>
             <input
               type="text"
-              placeholder="ex: tiktokmademebuyit"
+              placeholder={t.crawler.targetPlaceholder}
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500"
@@ -257,7 +259,7 @@ export default function CrawlerPage() {
                 ) : (
                   <Play className="w-4 h-4" />
                 )}
-                Iniciar
+                {t.crawler.start}
               </button>
               <button
                 onClick={() => scanHashtags.mutate()}
@@ -288,10 +290,10 @@ export default function CrawlerPage() {
       <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
-            Jobs Recentes
+            {t.crawler.recentJobs}
             {pendingJobs.length > 0 && (
               <span className="ml-2 text-xs text-amber-400">
-                ({pendingJobs.length} na fila)
+                ({pendingJobs.length} {t.crawler.inQueue})
               </span>
             )}
           </h2>
@@ -310,20 +312,20 @@ export default function CrawlerPage() {
         ) : (jobs ?? []).length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-gray-600">
             <Globe className="w-8 h-8 mb-2" />
-            <p className="text-sm">Nenhum job ainda. Inicie um rastreador acima.</p>
+            <p className="text-sm">{t.crawler.noPlatform}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-600 border-b border-gray-800">
-                  <th className="text-left py-3 px-4">Plataforma</th>
-                  <th className="text-left py-3 px-4">Tipo</th>
-                  <th className="text-left py-3 px-4">Alvo</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Vídeos</th>
-                  <th className="text-left py-3 px-4">Duração</th>
-                  <th className="text-left py-3 px-4">Iniciado</th>
+                  <th className="text-left py-3 px-4">{t.crawler.platform}</th>
+                  <th className="text-left py-3 px-4">{t.crawler.jobType}</th>
+                  <th className="text-left py-3 px-4">{t.crawler.target}</th>
+                  <th className="text-left py-3 px-4">{t.crawler.status}</th>
+                  <th className="text-left py-3 px-4">{t.crawler.videos}</th>
+                  <th className="text-left py-3 px-4">{t.crawler.duration}</th>
+                  <th className="text-left py-3 px-4">{t.crawler.started}</th>
                 </tr>
               </thead>
               <tbody>

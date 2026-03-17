@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { usePreferences, convertPrice } from "@/store/preferences";
+import { usePreferences, convertPrice, useT } from "@/store/preferences";
 
 const PLANS = [
   {
@@ -74,6 +74,7 @@ export default function PricingPage() {
   const { isAuthenticated, user } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
   const { currency } = usePreferences();
+  const t = useT();
 
   const handleSubscribe = async (plan: typeof PLANS[0]) => {
     if (!plan.priceId || plan.id === "free") {
@@ -114,10 +115,10 @@ export default function PricingPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-4">
-            Preços Simples e Transparentes
+            {t.pricing.title}
           </h1>
           <p className="text-gray-400 text-lg max-w-xl mx-auto">
-            Descubra produtos virais antes da concorrência. Cancele quando quiser.
+            {t.pricing.subtitle}
           </p>
         </div>
 
@@ -140,7 +141,7 @@ export default function PricingPage() {
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-sky-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      MAIS POPULAR
+                      {t.pricing.mostPopular}
                     </span>
                   </div>
                 )}
@@ -164,7 +165,7 @@ export default function PricingPage() {
                 <div className="mb-6">
                   <div className="flex items-end gap-1">
                     <span className="text-4xl font-bold text-white">
-                      {plan.price === 0 ? "Grátis" : convertPrice(plan.price, currency)}
+                      {plan.price === 0 ? t.pricing.free : convertPrice(plan.price, currency)}
                     </span>
                     {plan.price > 0 && (
                       <span className="text-gray-500 mb-1.5">/{plan.interval}</span>
@@ -205,7 +206,7 @@ export default function PricingPage() {
                   {loading === plan.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : null}
-                  {isCurrent ? "Plano Atual" : plan.cta}
+                  {isCurrent ? t.pricing.currentPlan : plan.cta}
                 </button>
               </div>
             );
@@ -214,8 +215,8 @@ export default function PricingPage() {
 
         {/* Footer note */}
         <p className="text-center text-sm text-gray-600 mt-8">
-          Todos os planos incluem 7 dias grátis. Cartão de crédito não exigido no plano gratuito.{" "}
-          <Link href="/" className="text-sky-400 hover:text-sky-300">Voltar ao Painel</Link>
+          {t.pricing.trialNote}{" "}
+          <Link href="/" className="text-sky-400 hover:text-sky-300">{t.common.back}</Link>
         </p>
       </div>
     </div>

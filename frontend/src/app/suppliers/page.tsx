@@ -7,7 +7,7 @@ import {
   ExternalLink, Search, RefreshCw,
 } from "lucide-react";
 import { suppliersApi } from "@/lib/api";
-import { usePreferences, convertPrice } from "@/store/preferences";
+import { usePreferences, convertPrice, useT } from "@/store/preferences";
 
 const PLATFORM_BADGES: Record<string, { label: string; color: string }> = {
   aliexpress:     { label: "AliExpress",     color: "text-red-400 bg-red-400/10" },
@@ -30,6 +30,7 @@ function ProfitBadge({ margin }: { margin: number }) {
 }
 
 function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) {
+  const t = useT();
   const badge = PLATFORM_BADGES[supplier.platform] ?? {
     label: supplier.platform, color: "text-gray-400 bg-gray-400/10",
   };
@@ -45,7 +46,7 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
             </span>
             {supplier.is_verified && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 font-medium">
-                ✓ Verificado
+                ✓ {t.common.verified}
               </span>
             )}
           </div>
@@ -103,7 +104,7 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
         <div className="flex items-center gap-4 text-xs text-gray-500">
           {supplier.ships_to?.length > 0 && (
             <span>
-              Envia para {supplier.ships_to.slice(0, 2).join(", ")}
+              {t.suppliers.shipsTo} {supplier.ships_to.slice(0, 2).join(", ")}
               {supplier.ships_to.length > 2 ? ` +${supplier.ships_to.length - 2}` : ""}
             </span>
           )}
@@ -115,7 +116,7 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
           >
-            {supplier.platform === "amazon" ? "Cadastrar Afiliado" : "Ver Loja"}
+            {supplier.platform === "amazon" ? t.suppliers.registerAffiliate : t.suppliers.viewStore}
             <ExternalLink className="w-3 h-3" />
           </a>
         )}
@@ -129,6 +130,7 @@ export default function SuppliersPage() {
   const [platform, setPlatform]   = useState("all");
   const [minMargin, setMinMargin] = useState(0);
   const { currency } = usePreferences();
+  const t = useT();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["suppliers", platform, minMargin],
@@ -146,9 +148,9 @@ export default function SuppliersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Fornecedores</h1>
+          <h1 className="text-2xl font-bold text-white">{t.suppliers.title}</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Descubra fornecedores dropship com as melhores margens de lucro
+            {t.suppliers.subtitle}
           </p>
         </div>
         <button
@@ -156,7 +158,7 @@ export default function SuppliersPage() {
           className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
-          Atualizar
+          {t.common.refresh}
         </button>
       </div>
 
@@ -167,7 +169,7 @@ export default function SuppliersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
-            placeholder="Buscar fornecedores..."
+            placeholder={t.suppliers.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500"
@@ -180,7 +182,7 @@ export default function SuppliersPage() {
           onChange={(e) => setPlatform(e.target.value)}
           className="px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-brand-500"
         >
-          <option value="all">Todas as Plataformas</option>
+          <option value="all">{t.suppliers.allPlatforms}</option>
           <option value="aliexpress">AliExpress</option>
           <option value="alibaba">Alibaba</option>
           <option value="cj_dropshipping">CJ Dropshipping</option>
@@ -194,7 +196,7 @@ export default function SuppliersPage() {
           onChange={(e) => setMinMargin(Number(e.target.value))}
           className="px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-brand-500"
         >
-          <option value={0}>Qualquer Margem</option>
+          <option value={0}>{t.suppliers.anyMargin}</option>
           <option value={30}>≥ 30%</option>
           <option value={50}>≥ 50%</option>
           <option value={60}>≥ 60%</option>
@@ -205,7 +207,7 @@ export default function SuppliersPage() {
       {/* Stats bar */}
       <div className="flex gap-6 text-sm text-gray-500">
         <span>
-          <span className="text-white font-semibold">{suppliers.length}</span> fornecedores encontrados
+          <span className="text-white font-semibold">{suppliers.length}</span> {t.suppliers.found}
         </span>
         <span>
           <span className="text-green-400 font-semibold">
@@ -213,13 +215,13 @@ export default function SuppliersPage() {
               Math.max(...(s.listings ?? []).map((l: any) => Number(l.profit_margin_pct ?? 0)), 0) >= 60
             ).length}
           </span>{" "}
-          alta margem (≥60%)
+          {t.suppliers.highMargin}
         </span>
         <span>
           <span className="text-brand-400 font-semibold">
             {suppliers.filter((s: any) => s.is_verified).length}
           </span>{" "}
-          verificados
+          {t.suppliers.verified}
         </span>
       </div>
 
@@ -240,8 +242,8 @@ export default function SuppliersPage() {
       ) : suppliers.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-gray-600">
           <Package className="w-10 h-10 mb-3" />
-          <p className="text-lg font-medium">Nenhum fornecedor encontrado</p>
-          <p className="text-sm mt-1">Tente ajustar os filtros</p>
+          <p className="text-lg font-medium">{t.suppliers.noSuppliers}</p>
+          <p className="text-sm mt-1">{t.suppliers.adjustFilters}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

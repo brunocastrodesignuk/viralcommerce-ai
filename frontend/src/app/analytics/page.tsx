@@ -10,7 +10,7 @@ import {
   ShoppingCart, BarChart2, Activity, Globe,
 } from "lucide-react";
 import { analyticsApi } from "@/lib/api";
-import { usePreferences, convertPrice } from "@/store/preferences";
+import { usePreferences, convertPrice, useT } from "@/store/preferences";
 
 const PLATFORM_COLORS: Record<string, string> = {
   tiktok:    "#ff0050",
@@ -56,6 +56,7 @@ function StatCard({
 
 export default function AnalyticsPage() {
   const { currency } = usePreferences();
+  const t = useT();
 
   const { data: overview, isLoading: loadingOverview } = useQuery({
     queryKey: ["analytics-overview"],
@@ -96,56 +97,56 @@ export default function AnalyticsPage() {
 
   const kpis = [
     {
-      title: "Receita Total",
+      title: t.analytics.totalRevenue,
       value: `${convertPrice(totalRevenue * 1000, currency).replace(/,\d+$/, "K")}`,
       subtitle: "Receita acumulada de campanhas",
       icon: DollarSign,
       color: "green",
     },
     {
-      title: "Gasto em Anúncios",
+      title: t.analytics.adSpend,
       value: `${convertPrice(totalSpend * 1000, currency).replace(/,\d+$/, "K")}`,
       subtitle: "Gasto total em todas as redes",
       icon: TrendingUp,
       color: "brand",
     },
     {
-      title: "ROAS Médio",
+      title: t.analytics.avgRoas,
       value: `${(overview?.avg_roas ?? 0).toFixed(2)}×`,
       subtitle: "Retorno sobre gasto em anúncios",
       icon: BarChart2,
       color: "purple",
     },
     {
-      title: "Produtos Virais",
+      title: t.analytics.viralProducts,
       value: overview?.viral_products_count ?? 0,
       subtitle: "Produtos com score ≥ 70",
       icon: Activity,
       color: "red",
     },
     {
-      title: "Vídeos Rastreados",
+      title: t.analytics.videosTracked,
       value: overview?.total_videos_tracked?.toLocaleString("pt-BR") ?? 0,
       subtitle: "Em todas as plataformas",
       icon: Eye,
       color: "brand",
     },
     {
-      title: "Conversões",
+      title: t.analytics.conversions,
       value: overview?.total_conversions?.toLocaleString("pt-BR") ?? 0,
       subtitle: "Total de conversões em anúncios",
       icon: ShoppingCart,
       color: "green",
     },
     {
-      title: "CTR Médio",
+      title: t.analytics.avgCtr,
       value: `${((overview?.avg_ctr ?? 0) * 100).toFixed(2)}%`,
       subtitle: "Taxa de cliques",
       icon: MousePointerClick,
       color: "amber",
     },
     {
-      title: "Plataformas Ativas",
+      title: t.analytics.activePlatforms,
       value: overview?.active_platforms ?? 0,
       subtitle: "Rastreando agora",
       icon: Globe,
@@ -157,9 +158,9 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Análises</h1>
+        <h1 className="text-2xl font-bold text-white">{t.analytics.title}</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Desempenho em tempo real de todas as campanhas e rastreadores
+          {t.analytics.subtitle}
         </p>
       </div>
 
@@ -175,7 +176,7 @@ export default function AnalyticsPage() {
         {/* Viral Score Timeline */}
         <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Score Viral ao Longo do Tempo (7 dias)
+            {t.analytics.viralTimeline}
           </h2>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={timeline ?? []}>
@@ -207,7 +208,7 @@ export default function AnalyticsPage() {
         {/* Category Breakdown */}
         <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Produtos por Categoria
+            {t.analytics.byCategory}
           </h2>
           <div className="flex items-center gap-4">
             <ResponsiveContainer width="50%" height={220}>
@@ -251,7 +252,7 @@ export default function AnalyticsPage() {
       {platformStats && (
         <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Desempenho por Plataforma
+            {t.analytics.platformPerformance}
           </h2>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={platformStats} barCategoryGap="30%">
@@ -280,7 +281,7 @@ export default function AnalyticsPage() {
       {adPerformance && adPerformance.length > 0 && (
         <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Anúncios com Melhor Desempenho
+            {t.analytics.topAds}
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

@@ -6,7 +6,7 @@ import { campaignsApi, productsApi, Campaign } from "@/lib/api";
 import { Play, Pause, Zap, TrendingUp, DollarSign, BarChart2, X, ChevronDown } from "lucide-react";
 import { clsx } from "clsx";
 import toast from "react-hot-toast";
-import { usePreferences, convertPrice } from "@/store/preferences";
+import { usePreferences, convertPrice, useT } from "@/store/preferences";
 
 const STATUS_COLORS: Record<string, string> = {
   draft:     "bg-gray-500/20 text-gray-400",
@@ -35,6 +35,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [budget, setBudget] = useState("50");
   const [productId, setProductId] = useState("");
   const { currency } = usePreferences();
+  const t = useT();
 
   const { data: products } = useQuery({
     queryKey: ["products-for-campaign"],
@@ -72,7 +73,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <div>
-            <h2 className="text-lg font-bold text-white">Nova Campanha</h2>
+            <h2 className="text-lg font-bold text-white">{t.campaigns.newCampaign}</h2>
             <p className="text-sm text-gray-400">Configure e lance sua campanha de anúncios</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
@@ -210,7 +211,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
               onClick={onClose}
               className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-colors"
             >
-              Cancelar
+              {t.common.cancel}
             </button>
             <button
               type="submit"
@@ -222,7 +223,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
               ) : (
                 <Zap className="w-4 h-4" />
               )}
-              Criar Campanha
+              {t.campaigns.newCampaign}
             </button>
           </div>
         </form>
@@ -237,6 +238,7 @@ export default function CampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const qc = useQueryClient();
   const { currency } = usePreferences();
+  const t = useT();
 
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ["campaigns"],
@@ -281,15 +283,15 @@ export default function CampaignsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Campanhas de Anúncios</h1>
-            <p className="text-sm text-gray-400">Otimização automatizada de campanhas</p>
+            <h1 className="text-2xl font-bold text-white">{t.campaigns.title}</h1>
+            <p className="text-sm text-gray-400">{t.campaigns.subtitle}</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
             className="btn-primary text-sm flex items-center gap-2"
           >
             <Zap className="w-4 h-4" />
-            Nova Campanha
+            {t.campaigns.newCampaign}
           </button>
         </div>
 
@@ -297,25 +299,25 @@ export default function CampaignsPage() {
         <div className="grid grid-cols-4 gap-4">
           {[
             {
-              label: "Ativas",
+              label: t.campaigns.active,
               value: campaigns?.filter((c: Campaign) => c.status === "running").length ?? 0,
               icon: <Play className="w-4 h-4 text-green-400" />,
               color: "text-green-400",
             },
             {
-              label: "Gasto Total",
+              label: t.campaigns.totalSpend,
               value: convertPrice(campaigns?.reduce((s: number, c: Campaign) => s + (c.total_spend || 0), 0) ?? 0, currency),
               icon: <DollarSign className="w-4 h-4 text-brand-400" />,
               color: "text-brand-400",
             },
             {
-              label: "Receita Total",
+              label: t.campaigns.totalRevenue,
               value: convertPrice(campaigns?.reduce((s: number, c: Campaign) => s + (c.total_revenue || 0), 0) ?? 0, currency),
               icon: <TrendingUp className="w-4 h-4 text-purple-400" />,
               color: "text-purple-400",
             },
             {
-              label: "ROAS Médio",
+              label: t.campaigns.avgRoas,
               value: `${(campaigns?.reduce((s: number, c: Campaign) => s + (c.roas || 0), 0) / (campaigns?.length || 1)).toFixed(1) ?? 0}x`,
               icon: <BarChart2 className="w-4 h-4 text-amber-400" />,
               color: "text-amber-400",
@@ -336,21 +338,21 @@ export default function CampaignsPage() {
           {!isLoading && (!campaigns || campaigns.length === 0) ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-600">
               <Zap className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-lg font-medium text-gray-400">Nenhuma campanha ainda</p>
-              <p className="text-sm mt-1 text-gray-600">Clique em "Nova Campanha" para começar</p>
+              <p className="text-lg font-medium text-gray-400">{t.campaigns.noCampaigns}</p>
+              <p className="text-sm mt-1 text-gray-600">Clique em "{t.campaigns.newCampaign}" para começar</p>
               <button
                 onClick={() => setShowModal(true)}
                 className="mt-4 btn-primary text-sm flex items-center gap-2"
               >
                 <Zap className="w-4 h-4" />
-                Criar Primeira Campanha
+                {t.campaigns.createFirst}
               </button>
             </div>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="text-left border-b border-gray-800">
-                  {["Campanha", "Rede", "Status", "Orçamento/dia", "Gasto", "Receita", "ROAS", "Ações"].map((h) => (
+                  {[t.campaigns.campaign, t.campaigns.network, t.campaigns.status, t.campaigns.dailyBudget, t.campaigns.spend, t.campaigns.revenue, "ROAS", t.campaigns.actions].map((h) => (
                     <th key={h} className="pb-3 text-xs font-medium text-gray-500 uppercase tracking-wider pr-4">{h}</th>
                   ))}
                 </tr>
