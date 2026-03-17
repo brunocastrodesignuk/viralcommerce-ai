@@ -135,13 +135,27 @@ async def stripe_webhook(
         user_id = data.get("metadata", {}).get("user_id")
         customer_id = data.get("customer")
         if user_id:
+            # Determine plan from price ID purchased
+            enterprise_price_id = os.getenv("STRIPE_ENTERPRISE_PRICE_ID", "")
+            purchased_plan = "pro"
+            try:
+                # Retrieve line items to check which price was purchased
+                session_id = data.get("id", "")
+                if session_id and enterprise_price_id:
+                    line_items = stripe.checkout.Session.list_line_items(session_id, limit=1)
+                    for item in line_items.data:
+                        if item.price and item.price.id == enterprise_price_id:
+                            purchased_plan = "enterprise"
+                            break
+            except Exception:
+                pass
             from sqlalchemy import update
             from backend.models.user import User as UserModel
             import uuid
             await db.execute(
                 update(UserModel)
                 .where(UserModel.id == uuid.UUID(user_id))
-                .values(plan="pro", stripe_customer_id=customer_id)
+                .values(plan=purchased_plan, stripe_customer_id=customer_id)
             )
             await db.commit()
 
@@ -161,12 +175,23 @@ async def stripe_webhook(
         customer_id = data.get("customer")
         status = data.get("status")
         if customer_id and status == "active":
+            # Check which price is on this subscription
+            enterprise_price_id = os.getenv("STRIPE_ENTERPRISE_PRICE_ID", "")
+            updated_plan = "pro"
+            try:
+                items = data.get("items", {}).get("data", [])
+                for item in items:
+                    if item.get("price", {}).get("id") == enterprise_price_id:
+                        updated_plan = "enterprise"
+                        break
+            except Exception:
+                pass
             from sqlalchemy import update
             from backend.models.user import User as UserModel
             await db.execute(
                 update(UserModel)
                 .where(UserModel.stripe_customer_id == customer_id)
-                .values(plan="pro")
+                .values(plan=updated_plan)
             )
             await db.commit()
 
@@ -285,6 +310,9 @@ async def mercadopago_webhook(
                 if payment.get("status") == "approved":
                     user_id = payment.get("metadata", {}).get("user_id") or payment.get("external_reference")
                     plan = payment.get("metadata", {}).get("plan", "pro")
+                    # Normalize plan value
+                    if plan not in ("pro", "enterprise"):
+                        plan = "pro"
                     if user_id:
                         from sqlalchemy import update
                         from backend.models.user import User as UserModel

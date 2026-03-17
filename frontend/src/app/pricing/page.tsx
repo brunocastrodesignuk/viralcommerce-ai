@@ -109,16 +109,24 @@ export default function PricingPage() {
       return;
     }
 
-    // Enterprise: contact via WhatsApp or email
+    // Enterprise: use payment if configured, otherwise WhatsApp/email
     if (plan.id === "enterprise") {
-      const wa = payConfig?.whatsapp;
-      if (wa) {
-        const msg = encodeURIComponent(`Olá! Tenho interesse no Plano Empresarial do ViralCommerce AI.`);
-        window.open(`https://wa.me/${wa.replace(/\D/g, "")}?text=${msg}`, "_blank");
-      } else {
-        window.open("mailto:contato@viralcommerce.ai?subject=Plano Empresarial", "_blank");
+      // If payment is configured AND we have an enterprise price ID, use checkout
+      const hasEnterpriseCheckout =
+        payConfig?.any_configured &&
+        plan.priceId &&
+        plan.priceId !== "price_enterprise";
+      if (!hasEnterpriseCheckout) {
+        const wa = payConfig?.whatsapp;
+        if (wa) {
+          const msg = encodeURIComponent(`Olá! Tenho interesse no Plano Empresarial do ViralCommerce AI.`);
+          window.open(`https://wa.me/${wa.replace(/\D/g, "")}?text=${msg}`, "_blank");
+        } else {
+          window.open("mailto:contato@viralcommerce.ai?subject=Plano Empresarial", "_blank");
+        }
+        return;
       }
-      return;
+      // Fall through to normal checkout below
     }
 
     // No payment configured

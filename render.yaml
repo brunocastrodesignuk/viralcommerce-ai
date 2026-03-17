@@ -71,6 +71,14 @@ services:
         sync: false          # ← Cole sua STRIPE_SECRET_KEY (sk_live_... ou sk_test_...)
       - key: STRIPE_WEBHOOK_SECRET
         sync: false          # ← Cole após criar webhook em dashboard.stripe.com/webhooks
+      - key: STRIPE_PRO_PRICE_ID
+        sync: false          # ← Price ID do plano Pro (gerado pelo stripe_setup.py)
+      - key: STRIPE_ENTERPRISE_PRICE_ID
+        sync: false          # ← Price ID do plano Empresarial (gerado pelo stripe_setup.py)
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false          # ← Token do Mercado Pago (TEST-xxx em sandbox, APP_USR-xxx em prod)
+      - key: SUPPORT_WHATSAPP
+        value: "447470361422" # ← WhatsApp de suporte (usado quando pagamento não configurado)
 
   # ── Redis (Key-Value) ────────────────────────────────────────────────────────
   - type: redis
@@ -97,9 +105,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_STRIPE_PRO_PRICE_ID
-        sync: false          # ← Cole o Price ID do plano Pro no Stripe
+        sync: false          # ← Price ID do plano Pro (mesmo valor do backend)
       - key: NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID
-        sync: false          # ← Cole o Price ID do plano Enterprise no Stripe
+        sync: false          # ← Price ID do plano Empresarial (mesmo valor do backend)
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false          # ← Chave pública Stripe (pk_live_... ou pk_test_...)
 
 databases:
   # PostgreSQL gratuito (90 dias, depois $7/mo)
