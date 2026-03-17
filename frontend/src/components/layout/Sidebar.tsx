@@ -15,6 +15,7 @@ import {
   Crown,
   BookOpen,
   Globe,
+  Bookmark,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useT } from "@/store/preferences";
@@ -24,13 +25,14 @@ export function Sidebar() {
   const t = useT();
 
   const NAV_ITEMS = [
-    { href: "/",          label: t.nav.dashboard,  icon: LayoutDashboard },
-    { href: "/products",  label: t.nav.products,   icon: ShoppingBag },
-    { href: "/trends",    label: t.nav.trends,     icon: TrendingUp },
-    { href: "/suppliers", label: t.nav.suppliers,  icon: Truck },
-    { href: "/campaigns", label: t.nav.campaigns,  icon: Megaphone },
-    { href: "/analytics", label: t.nav.analytics,  icon: BarChart3 },
-    { href: "/crawler",   label: t.nav.crawler,    icon: Zap },
+    { href: "/",           label: t.nav.dashboard,  icon: LayoutDashboard },
+    { href: "/products",   label: t.nav.products,   icon: ShoppingBag },
+    { href: "/trends",     label: t.nav.trends,     icon: TrendingUp },
+    { href: "/watchlist",  label: "Favoritos",       icon: Bookmark },
+    { href: "/suppliers",  label: t.nav.suppliers,  icon: Truck },
+    { href: "/campaigns",  label: t.nav.campaigns,  icon: Megaphone },
+    { href: "/analytics",  label: t.nav.analytics,  icon: BarChart3 },
+    { href: "/crawler",    label: t.nav.crawler,    icon: Zap },
   ];
 
   return (
@@ -54,8 +56,10 @@ export function Sidebar() {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
-              key={href}
+              key={`nav-${href}`}
               href={href}
+              data-href={href}
+              style={{ pointerEvents: "auto" }}
               className={clsx(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 active

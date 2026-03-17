@@ -31,9 +31,27 @@ const CATEGORY_PT: Record<string, string> = {
   "Toys & Games": "Brinquedos e Jogos",
 };
 
+const MARGIN_OPTIONS = [
+  { label: "Qualquer Margem", value: 0 },
+  { label: ">50%", value: 50 },
+  { label: ">60%", value: 60 },
+  { label: ">70%", value: 70 },
+  { label: ">80%", value: 80 },
+];
+
+function getEstimatedMarginNum(min?: number, max?: number, demandScore?: number): number {
+  if (!min && !max) return 0;
+  const avgCost = ((min || 0) + (max || min || 0)) / 2;
+  if (avgCost <= 0) return 0;
+  const multiplier = 2.5 + ((demandScore || 50) / 100) * 1.5;
+  const salePrice = avgCost * multiplier;
+  return ((salePrice - avgCost) / salePrice) * 100;
+}
+
 export default function ProductsPage() {
   const [category, setCategory] = useState<string | undefined>();
   const [minScore, setMinScore] = useState(0);
+  const [minMargin, setMinMargin] = useState(0);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("viral_score");
   const [refreshingImages, setRefreshingImages] = useState(false);
@@ -112,6 +130,31 @@ export default function ProductsPage() {
     }
   };
 
+  // Client-side margin filter
+  const filteredItems = (data?.items ?? []).filter((p) => {
+    if (minMargin === 0) return true;
+    const margin = getEstimatedMarginNum(
+      p.estimated_price_min,
+      p.estimated_price_max,
+      p.demand_score
+    );
+    return margin >= minMargin;
+  });
+
+  // Client-side sort for "Maior Margem" and "Menor Preço"
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    if (sortBy === "highest_margin") {
+      return (
+        getEstimatedMarginNum(b.estimated_price_min, b.estimated_price_max, b.demand_score) -
+        getEstimatedMarginNum(a.estimated_price_min, a.estimated_price_max, a.demand_score)
+      );
+    }
+    if (sortBy === "lowest_price") {
+      return (a.estimated_price_min ?? 0) - (b.estimated_price_min ?? 0);
+    }
+    return 0; // backend already sorted for viral_score and updated_at
+  });
+
   return (
     <>
     {shopifyProduct && (
@@ -140,8 +183,9 @@ export default function ProductsPage() {
       </div>
 
       {/* Filtros */}
-      <div className="card flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap flex-1">
+      <div className="card space-y-3">
+        {/* Category tabs */}
+        <div className="flex items-center gap-2 flex-wrap">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
@@ -160,29 +204,47 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500"
-        >
-          <option value="viral_score">{t.products.topViral}</option>
-          <option value="updated_at">{t.products.newest}</option>
-        </select>
+        {/* Controls row */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500"
+          >
+            <option value="viral_score">{t.products.topViral}</option>
+            <option value="highest_margin">Maior Margem</option>
+            <option value="lowest_price">Menor Preço</option>
+            <option value="updated_at">{t.products.newest}</option>
+          </select>
 
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-gray-500" />
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={minScore}
-            onChange={(e) => {
-              setMinScore(Number(e.target.value));
-              setPage(1);
-            }}
-            className="w-24 accent-sky-500"
-          />
-          <span className="text-xs text-gray-400 w-8">{minScore}+</span>
+          {/* Margin filter */}
+          <select
+            value={minMargin}
+            onChange={(e) => { setMinMargin(Number(e.target.value)); setPage(1); }}
+            className="bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500"
+          >
+            {MARGIN_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+
+          {/* Min score slider */}
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-gray-500" />
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={minScore}
+              onChange={(e) => {
+                setMinScore(Number(e.target.value));
+                setPage(1);
+              }}
+              className="w-24 accent-sky-500"
+            />
+            <span className="text-xs text-gray-400 w-8">{minScore}+</span>
+          </div>
         </div>
       </div>
 
@@ -206,7 +268,7 @@ export default function ProductsPage() {
             Tentar novamente
           </button>
         </div>
-      ) : !data?.items?.length ? (
+      ) : !sortedItems.length ? (
         <div className="flex flex-col items-center justify-center h-64 text-gray-500">
           <TrendingUp className="w-12 h-12 mb-3 opacity-30" />
           <p className="text-sm text-center">
@@ -215,7 +277,7 @@ export default function ProductsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {data.items.map((product) => (
+          {sortedItems.map((product) => (
             <ProductCard
               key={product.id}
               product={product}

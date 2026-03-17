@@ -9,7 +9,7 @@ import { usePreferences, applyTheme, useT } from "@/store/preferences";
 import {
   TrendingUp, Eye, Zap, DollarSign,
   Activity, Globe, BarChart2, ArrowUpRight, X,
-  Flame, Clock, CheckCircle, Wifi, Loader2,
+  Flame, Clock, CheckCircle, Wifi, Loader2, Star,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -247,6 +247,49 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* Produto do Dia */}
+        {trending && (trending as any[]).length > 0 && (() => {
+          const best = [...(trending as any[])].sort((a, b) => b.viral_score - a.viral_score)[0];
+          const avgCost = ((best.estimated_price_min || 0) + (best.estimated_price_max || best.estimated_price_min || 0)) / 2;
+          const multiplier = 2.5 + ((best.demand_score || 50) / 100) * 1.5;
+          const salePrice = avgCost > 0 ? avgCost * multiplier : 0;
+          const margin = avgCost > 0 ? Math.round(((salePrice - avgCost) / salePrice) * 100) : 0;
+          return (
+            <div className="rounded-xl border border-red-500/20 bg-gradient-to-r from-red-500/10 to-orange-500/5 p-5 flex items-center gap-5">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <Flame className="w-5 h-5 text-red-400 animate-pulse" />
+                <span className="text-sm font-bold text-red-400 whitespace-nowrap">Produto do Dia</span>
+              </div>
+              {best.image_urls?.[0] && (
+                <img
+                  src={best.image_urls[0]}
+                  alt={best.name}
+                  className="w-14 h-14 rounded-lg object-cover border border-gray-700 flex-shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-bold">
+                    Score {Math.round(best.viral_score)}
+                  </span>
+                  <span className="text-xs text-gray-500">{best.category}</span>
+                </div>
+                <p className="font-semibold text-white truncate">{best.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Margem estimada: <span className="text-green-400 font-bold">~{margin}%</span>
+                </p>
+              </div>
+              <a
+                href={`/products/${best.id}`}
+                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Ver Análise
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
+            </div>
+          );
+        })()}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-4">

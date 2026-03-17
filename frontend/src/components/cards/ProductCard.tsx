@@ -2,10 +2,12 @@
 
 import { Product } from "@/lib/api";
 import { ViralScoreBadge } from "@/components/ui/ViralScoreBadge";
-import { ArrowUpRight, ShoppingCart, Zap, Package, Star } from "lucide-react";
+import { ArrowUpRight, ShoppingCart, Zap, Package, Star, Bookmark } from "lucide-react";
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
 import { usePreferences, convertPrice } from "@/store/preferences";
+import { useWatchlist } from "@/store/watchlist";
+import toast from "react-hot-toast";
 
 interface ProductCardProps {
   product: Product;
@@ -27,12 +29,24 @@ export function ProductCard({
   const img    = product.image_urls?.[0];
   const router = useRouter();
   const { currency } = usePreferences();
+  const watchlist = useWatchlist();
+  const isBookmarked = watchlist.has(product.id);
 
   const handleCardClick = () => {
     if (onClick) {
       onClick(product);
     } else {
       router.push(`/products/${product.id}`);
+    }
+  };
+
+  const handleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    watchlist.toggle(product.id);
+    if (isBookmarked) {
+      toast("Removido dos favoritos", { icon: "🗑️" });
+    } else {
+      toast.success("Adicionado aos favoritos!");
     }
   };
 
@@ -77,8 +91,20 @@ export function ProductCard({
         <div className="absolute top-2 right-2">
           <ViralScoreBadge score={product.viral_score} />
         </div>
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex items-center gap-1.5">
           <span className="badge bg-gray-900/80 backdrop-blur-sm text-gray-300 text-xs">{product.category}</span>
+          <button
+            onClick={handleBookmark}
+            className={clsx(
+              "p-1 rounded-md backdrop-blur-sm transition-colors",
+              isBookmarked
+                ? "bg-sky-500/80 text-white"
+                : "bg-gray-900/80 text-gray-400 hover:text-sky-400"
+            )}
+            title={isBookmarked ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          >
+            <Bookmark className={clsx("w-3 h-3", isBookmarked && "fill-current")} />
+          </button>
         </div>
       </div>
 
@@ -128,7 +154,7 @@ export function ProductCard({
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Margem estimada:</span>
           <span className="text-xs font-bold text-brand-400">
-            ~{getEstimatedMargin(priceMin, priceMax)}%
+            ~{getEstimatedMargin(priceMin, priceMax, product.demand_score)}%
           </span>
         </div>
 
@@ -137,19 +163,19 @@ export function ProductCard({
           <ActionButton
             icon={<ShoppingCart className="w-3 h-3" />}
             label="Importar"
-            onClick={() => onImport?.(product)}
+            onClick={(e) => { e.stopPropagation(); onImport?.(product); }}
             className="bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border-brand-500/20"
           />
           <ActionButton
             icon={<Zap className="w-3 h-3" />}
             label="Anúncios"
-            onClick={() => onGenerateAds?.(product)}
+            onClick={(e) => { e.stopPropagation(); onGenerateAds?.(product); }}
             className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/20"
           />
           <ActionButton
             icon={<ArrowUpRight className="w-3 h-3" />}
             label="Fornecedor"
-            onClick={() => onFindSupplier?.(product)}
+            onClick={(e) => { e.stopPropagation(); onFindSupplier?.(product); }}
             className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20"
           />
         </div>
@@ -174,7 +200,7 @@ function ActionButton({
 }: {
   icon: React.ReactNode;
   label: string;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   className: string;
 }) {
   return (
@@ -191,10 +217,13 @@ function ActionButton({
   );
 }
 
-function getEstimatedMargin(min?: number, max?: number): string {
-  if (!min || !max) return "~";
-  const avgCost   = (min + max) / 2;
-  const salePrice = avgCost * 3;
-  const margin    = ((salePrice - avgCost) / salePrice) * 100;
+function getEstimatedMargin(min?: number, max?: number, demandScore?: number): string {
+  if (!min && !max) return "~";
+  const avgCost = ((min || 0) + (max || min || 0)) / 2;
+  if (avgCost <= 0) return "~";
+  // Higher demand = higher possible markup
+  const multiplier = 2.5 + ((demandScore || 50) / 100) * 1.5; // 2.5x to 4x
+  const salePrice = avgCost * multiplier;
+  const margin = ((salePrice - avgCost) / salePrice) * 100;
   return Math.round(margin).toString();
 }

@@ -2,15 +2,17 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, productsApi } from "@/lib/api";
 import {
   TrendingUp, DollarSign, ShoppingBag, Zap, Star,
   ExternalLink, ArrowLeft, Globe, Users, Eye,
-  BarChart2, Package, CheckCircle, Copy, Flame,
+  BarChart2, Package, CheckCircle, Copy, Flame, Bookmark,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { ViralTimeline } from "@/components/charts/ViralTimeline";
 import { usePreferences, convertPrice } from "@/store/preferences";
+import { useWatchlist } from "@/store/watchlist";
+import { useState } from "react";
 
 // ─── API ──────────────────────────────────────────────────────────────────
 
@@ -80,12 +82,21 @@ export default function ProductAnalysisPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { currency } = usePreferences();
+  const watchlist = useWatchlist();
+  const [quantity, setQuantity] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["product-analysis", id],
     queryFn: () => fetchAnalysis(id),
     staleTime: 5 * 60 * 1000,
     retry: 2,
+  });
+
+  const { data: viralHistoryData } = useQuery({
+    queryKey: ["product-viral-history", id],
+    queryFn: () => productsApi.viralHistory(id, 30).then((r) => r.data),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   });
 
   if (isLoading) {
@@ -163,9 +174,29 @@ export default function ProductAnalysisPage() {
                   {trendLabel}
                 </span>
               </div>
-              <h1 className="text-xl font-bold text-white leading-tight max-w-lg">
-                {product.name}
-              </h1>
+              <div className="flex items-start gap-2">
+                <h1 className="text-xl font-bold text-white leading-tight max-w-lg">
+                  {product.name}
+                </h1>
+                <button
+                  onClick={() => {
+                    watchlist.toggle(product.id);
+                    if (watchlist.has(product.id)) {
+                      toast("Removido dos favoritos", { icon: "🗑️" });
+                    } else {
+                      toast.success("Adicionado aos favoritos!");
+                    }
+                  }}
+                  className={`flex-shrink-0 p-1.5 rounded-lg border transition-colors mt-0.5 ${
+                    watchlist.has(product.id)
+                      ? "bg-sky-500/20 border-sky-500/40 text-sky-400"
+                      : "bg-gray-800 border-gray-700 text-gray-500 hover:text-sky-400 hover:border-sky-500/40"
+                  }`}
+                  title={watchlist.has(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                >
+                  <Bookmark className={`w-4 h-4 ${watchlist.has(product.id) ? "fill-current" : ""}`} />
+                </button>
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <Flame className="w-4 h-4 text-red-400" />
                 <span className="text-sm font-semibold text-red-400">
@@ -344,6 +375,29 @@ export default function ProductAnalysisPage() {
                   </p>
                 </div>
               </div>
+              {/* Interactive quantity calculator */}
+              <div className="pt-3 border-t border-gray-800">
+                <div className="flex items-center gap-3 mb-2">
+                  <label className="text-xs text-gray-400 flex-1">Calcular lucro por quantidade:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, Math.min(100, Number(e.target.value))))}
+                    className="w-20 bg-gray-800 border border-gray-700 text-sm text-white rounded-lg px-2 py-1 text-center focus:outline-none focus:border-sky-500"
+                  />
+                  <span className="text-xs text-gray-500">un.</span>
+                </div>
+                <div className="bg-gradient-to-r from-green-500/10 to-sky-500/10 rounded-lg p-3 text-center border border-green-500/20">
+                  <p className="text-xs text-gray-400 mb-1">
+                    Lucro para {quantity} unidade{quantity !== 1 ? "s" : ""}:
+                  </p>
+                  <p className="text-lg font-bold text-green-400">
+                    {convertPrice((profit_analysis?.profit_per_unit || 0) * quantity, currency)}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -473,19 +527,17 @@ export default function ProductAnalysisPage() {
         </div>
       </div>
 
-      {/* Viral Timeline Chart */}
-      {viral_timeline && viral_timeline.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-100 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-sky-400" />
-              Histórico Viral (7 dias)
-            </h2>
-            <span className="text-xs text-gray-500">Dados TikTok Shop</span>
-          </div>
-          <ViralTimeline data={viral_timeline} />
+      {/* Viral Timeline Chart — always shown, 30-day data */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-gray-100 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-sky-400" />
+            Histórico Viral (30 dias)
+          </h2>
+          <span className="text-xs text-gray-500">Dados TikTok Shop</span>
         </div>
-      )}
+        <ViralTimeline data={viralHistoryData && viralHistoryData.length > 0 ? viralHistoryData : (viral_timeline ?? [])} />
+      </div>
 
       {/* Caption for social */}
       {marketing_assets?.caption && (
