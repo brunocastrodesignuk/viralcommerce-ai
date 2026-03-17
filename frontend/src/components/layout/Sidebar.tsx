@@ -17,6 +17,10 @@ import {
   Globe,
   Bookmark,
   MessageCircle,
+  Rocket,
+  Calculator,
+  Wand2,
+  Target,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useT } from "@/store/preferences";
@@ -29,15 +33,20 @@ export function Sidebar() {
   const plan = user?.plan ?? "free";
 
   const NAV_ITEMS = [
-    { href: "/",           label: t.nav.dashboard,  icon: LayoutDashboard },
-    { href: "/products",   label: t.nav.products,   icon: ShoppingBag },
-    { href: "/trends",     label: t.nav.trends,     icon: TrendingUp },
-    { href: "/watchlist",  label: "Favoritos",       icon: Bookmark },
-    { href: "/suppliers",  label: t.nav.suppliers,  icon: Truck },
-    { href: "/campaigns",  label: t.nav.campaigns,  icon: Megaphone },
-    { href: "/analytics",  label: t.nav.analytics,  icon: BarChart3 },
-    { href: "/crawler",    label: t.nav.crawler,    icon: Zap },
-    { href: "/support",    label: "Suporte",         icon: MessageCircle },
+    { href: "/",                label: t.nav.dashboard,       icon: LayoutDashboard, group: "main"   },
+    { href: "/products",        label: t.nav.products,        icon: ShoppingBag,     group: "main"   },
+    { href: "/trends",          label: t.nav.trends,          icon: TrendingUp,      group: "main"   },
+    { href: "/watchlist",       label: "Favoritos",            icon: Bookmark,        group: "main"   },
+    { href: "/profit-calculator", label: "Calculadora",        icon: Calculator,      group: "tools"  },
+    { href: "/ad-creator",      label: "Ad Creator AI",        icon: Wand2,           group: "tools"  },
+    { href: "/auto-optimizer",  label: "Auto-Optimizer",       icon: Target,          group: "tools"  },
+    { href: "/scale-engine",    label: "Scale Engine",         icon: Rocket,          group: "scale"  },
+    { href: "/empire",          label: "Empire Builder",       icon: Crown,           group: "scale"  },
+    { href: "/suppliers",       label: t.nav.suppliers,       icon: Truck,           group: "ops"    },
+    { href: "/campaigns",       label: t.nav.campaigns,       icon: Megaphone,       group: "ops"    },
+    { href: "/analytics",       label: t.nav.analytics,       icon: BarChart3,       group: "ops"    },
+    { href: "/crawler",         label: t.nav.crawler,         icon: Zap,             group: "ops"    },
+    { href: "/support",         label: "Suporte",              icon: MessageCircle,   group: "ops"    },
   ];
 
   return (
@@ -56,22 +65,62 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
+        {/* Descoberta */}
+        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-3 pb-1 pt-2">Descoberta</p>
+        {NAV_ITEMS.filter(i => i.group === "main").map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
-            <Link
-              key={`nav-${href}`}
-              href={href}
-              data-href={href}
-              style={{ pointerEvents: "auto" }}
-              className={clsx(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            <Link key={`nav-${href}`} href={href} data-href={href} style={{ pointerEvents: "auto" }}
+              className={clsx("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                active ? "bg-brand-500/10 text-brand-400 border border-brand-500/20" : "text-gray-400 hover:text-gray-100 hover:bg-gray-800"
+              )}>
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {label}
+            </Link>
+          );
+        })}
+        {/* Ferramentas AI */}
+        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-3 pb-1 pt-3">Ferramentas AI</p>
+        {NAV_ITEMS.filter(i => i.group === "tools").map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          return (
+            <Link key={`nav-${href}`} href={href} data-href={href} style={{ pointerEvents: "auto" }}
+              className={clsx("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                active ? "bg-brand-500/10 text-brand-400 border border-brand-500/20" : "text-gray-400 hover:text-gray-100 hover:bg-gray-800"
+              )}>
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {label}
+            </Link>
+          );
+        })}
+        {/* Escalar */}
+        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-3 pb-1 pt-3">🔥 Escalar</p>
+        {NAV_ITEMS.filter(i => i.group === "scale").map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          const isEmpire = href === "/empire";
+          return (
+            <Link key={`nav-${href}`} href={href} data-href={href} style={{ pointerEvents: "auto" }}
+              className={clsx("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 active
-                  ? "bg-brand-500/10 text-brand-400 border border-brand-500/20"
-                  : "text-gray-400 hover:text-gray-100 hover:bg-gray-800"
-              )}
-            >
+                  ? (isEmpire ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : "bg-brand-500/10 text-brand-400 border border-brand-500/20")
+                  : (isEmpire ? "text-amber-500/70 hover:text-amber-300 hover:bg-amber-500/5" : "text-gray-400 hover:text-gray-100 hover:bg-gray-800")
+              )}>
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {label}
+              {isEmpire && !active && <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold">£1M</span>}
+            </Link>
+          );
+        })}
+        {/* Operações */}
+        <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wider px-3 pb-1 pt-3">Operações</p>
+        {NAV_ITEMS.filter(i => i.group === "ops").map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          return (
+            <Link key={`nav-${href}`} href={href} data-href={href} style={{ pointerEvents: "auto" }}
+              className={clsx("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                active ? "bg-brand-500/10 text-brand-400 border border-brand-500/20" : "text-gray-400 hover:text-gray-100 hover:bg-gray-800"
+              )}>
               <Icon className="w-4 h-4 flex-shrink-0" />
               {label}
             </Link>

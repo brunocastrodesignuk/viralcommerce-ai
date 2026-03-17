@@ -26,6 +26,7 @@ TRACKED_HASHTAGS = [
 ]
 
 
+@router.get("")
 @router.get("/")
 async def trends_index(
     limit: int = Query(20, ge=1, le=100),
