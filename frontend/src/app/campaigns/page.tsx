@@ -403,6 +403,9 @@ export default function CampaignsPage() {
   const avgRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
   const running = typedCampaigns.filter((c) => c.status === "running").length;
 
+  // Estimated ROAS shown when no real campaign data exists yet
+  const estimatedRoas = AD_NETWORKS.reduce((s, n) => s + n.avgRoas, 0) / AD_NETWORKS.length;
+
   return (
     <>
       {showModal && (
@@ -431,7 +434,7 @@ export default function CampaignsPage() {
             { label: "Campanhas ativas", value: running, icon: <Play className="w-4 h-4 text-green-400" />, color: "text-green-400" },
             { label: "Gasto total", value: convertPrice(totalSpend, currency), icon: <DollarSign className="w-4 h-4 text-brand-400" />, color: "text-brand-400" },
             { label: "Receita total", value: convertPrice(totalRevenue, currency), icon: <TrendingUp className="w-4 h-4 text-purple-400" />, color: "text-purple-400" },
-            { label: "ROAS médio", value: avgRoas > 0 ? `${avgRoas.toFixed(1)}x` : "—", icon: <BarChart2 className="w-4 h-4 text-amber-400" />, color: "text-amber-400" },
+            { label: "ROAS médio", value: avgRoas > 0 ? `${avgRoas.toFixed(1)}x` : `~${estimatedRoas.toFixed(1)}x`, icon: <BarChart2 className="w-4 h-4 text-amber-400" />, color: "text-amber-400" },
           ].map((s) => (
             <div key={s.label} className="card">
               <div className="flex items-center gap-2 mb-2">
@@ -504,6 +507,12 @@ export default function CampaignsPage() {
                         ))
                       : typedCampaigns.map((c) => {
                           const netInfo = AD_NETWORKS.find((n) => n.id === c.network);
+                          // Prefer API roas; fall back to revenue/spend ratio
+                          const campaignRoas = c.roas != null
+                            ? c.roas
+                            : (c.total_spend ?? 0) > 0
+                              ? (c.total_revenue ?? 0) / (c.total_spend ?? 1)
+                              : null;
                           return (
                             <tr key={c.id} className="hover:bg-gray-800/50 transition-colors">
                               <td className="py-3 pr-4">
@@ -524,9 +533,9 @@ export default function CampaignsPage() {
                               <td className="py-3 pr-4 text-sm text-green-400">{convertPrice(c.total_revenue ?? 0, currency)}</td>
                               <td className="py-3 pr-4">
                                 <span className={clsx("text-sm font-bold",
-                                  (c.roas ?? 0) >= 2 ? "text-green-400" : (c.roas ?? 0) >= 1 ? "text-amber-400" : "text-red-400"
+                                  (campaignRoas ?? 0) >= 2 ? "text-green-400" : (campaignRoas ?? 0) >= 1 ? "text-amber-400" : "text-gray-500"
                                 )}>
-                                  {c.roas?.toFixed(1) ?? "—"}x
+                                  {campaignRoas != null ? `${campaignRoas.toFixed(1)}x` : `~${netInfo?.avgRoas ?? "—"}x`}
                                 </span>
                               </td>
                               <td className="py-3 pr-4">

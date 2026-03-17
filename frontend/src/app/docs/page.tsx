@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering so Next.js never tries to statically pre-render this
+// page — prevents the "Failed to fetch RSC payload" webpack chunk error.
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { useState } from "react";
 import {

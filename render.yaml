@@ -90,6 +90,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20.11.0"
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=460"   # cap under 512 MB free-tier RAM
       - key: NEXT_PUBLIC_API_URL
         value: https://viralcommerce-api.onrender.com/api/v1
       - key: NODE_ENV

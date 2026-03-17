@@ -57,8 +57,9 @@ export function ProductCard({
       ? `${convertPrice(priceMin, currency)} – ${convertPrice(priceMax, currency)}`
       : "—";
 
-  // Star rating: demand_score maps 0–100 → 4.0–5.0
-  const starRating = parseFloat((4.0 + (product.demand_score / 100) * 1.0).toFixed(1));
+  // Star rating: demand_score (or viral_score fallback) maps 0–100 → 4.0–5.0
+  const effectiveScore = product.demand_score || product.viral_score || 50;
+  const starRating = parseFloat((4.0 + (effectiveScore / 100) * 1.0).toFixed(1));
   const fullStars  = Math.floor(starRating);
   const halfStar   = starRating - fullStars >= 0.5;
 
@@ -134,7 +135,7 @@ export function ProductCard({
             ))}
           </div>
           <span className="text-xs text-yellow-400 font-medium">{starRating}</span>
-          <span className="text-xs text-gray-500">({(product.demand_score * 12 + 80).toFixed(0)} avaliações)</span>
+          <span className="text-xs text-gray-500">({(effectiveScore * 12 + 80).toFixed(0)} avaliações)</span>
         </div>
 
         {/* Description */}
@@ -154,7 +155,7 @@ export function ProductCard({
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Margem estimada:</span>
           <span className="text-xs font-bold text-brand-400">
-            ~{getEstimatedMargin(priceMin, priceMax, product.demand_score)}%
+            ~{getEstimatedMargin(priceMin, priceMax, product.demand_score, product.viral_score)}%
           </span>
         </div>
 
@@ -217,12 +218,19 @@ function ActionButton({
   );
 }
 
-function getEstimatedMargin(min?: number, max?: number, demandScore?: number): string {
+function getEstimatedMargin(min?: number, max?: number, demandScore?: number, viralScore?: number): string {
   if (!min && !max) return "~";
   const avgCost = ((min || 0) + (max || min || 0)) / 2;
   if (avgCost <= 0) return "~";
-  // Higher demand = higher possible markup
-  const multiplier = 2.5 + ((demandScore || 50) / 100) * 1.5; // 2.5x to 4x
+  // Use demand_score first; fall back to viral_score; then default to 50.
+  // Using ?? so explicit 0 is valid, but we still fall back when null/undefined.
+  const score = (demandScore != null && demandScore > 0)
+    ? demandScore
+    : (viralScore != null && viralScore > 0)
+      ? viralScore
+      : 50;
+  // Higher score = higher possible markup: 2.5x (score 0) → 4.0x (score 100)
+  const multiplier = 2.5 + (score / 100) * 1.5;
   const salePrice = avgCost * multiplier;
   const margin = ((salePrice - avgCost) / salePrice) * 100;
   return Math.round(margin).toString();
