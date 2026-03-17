@@ -244,6 +244,8 @@ export const suppliersApi = {
   list: (params?: { platform?: string; min_rating?: number }) =>
     api.get<Supplier[]>("/suppliers/", { params }).then((r) => r.data),
   get: (id: string) => api.get<Supplier>(`/suppliers/${id}`).then((r) => r.data),
+  liveSearch: (q: string, platforms?: string) =>
+    api.get("/suppliers/search/live", { params: { q, platforms } }).then((r) => r.data),
 };
 
 // ─── Crawler ──────────────────────────────────────────────────

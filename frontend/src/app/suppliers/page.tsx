@@ -15,6 +15,7 @@ const PLATFORM_BADGES: Record<string, { label: string; color: string }> = {
   cj_dropshipping:{ label: "CJ Dropshipping", color: "text-green-400 bg-green-400/10" },
   temu:           { label: "Temu",            color: "text-purple-400 bg-purple-400/10" },
   amazon:         { label: "Amazon Afiliados", color: "text-amber-400 bg-amber-400/10" },
+  shein:          { label: "SHEIN",           color: "text-pink-400 bg-pink-400/10" },
 };
 
 function ProfitBadge({ margin }: { margin: number }) {
@@ -92,6 +93,18 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
                   <p className="text-xs text-gray-500 mt-1">
                     {listing.lead_time_days}d prazo
                   </p>
+                )}
+                {listing.product_url && (
+                  <a
+                    href={listing.product_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-0.5 mt-1"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    Ver no site
+                  </a>
                 )}
               </div>
             </div>
@@ -188,6 +201,7 @@ export default function SuppliersPage() {
           <option value="cj_dropshipping">CJ Dropshipping</option>
           <option value="temu">Temu</option>
           <option value="amazon">Amazon Afiliados</option>
+          <option value="shein">SHEIN</option>
         </select>
 
         {/* Margin filter */}
