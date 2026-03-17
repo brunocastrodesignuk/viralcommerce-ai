@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { productsApi, api } from "@/lib/api";
 import { ProductCard } from "@/components/cards/ProductCard";
 import { ShopifyImportModal } from "@/components/modals/ShopifyImportModal";
@@ -39,6 +39,7 @@ export default function ProductsPage() {
   const [refreshingImages, setRefreshingImages] = useState(false);
   const [shopifyProduct, setShopifyProduct] = useState<any>(null);
   const t = useT();
+  const queryClient = useQueryClient();
 
   const handleRefreshImages = async () => {
     setRefreshingImages(true);
@@ -97,6 +98,17 @@ export default function ProductsPage() {
       toast.error("Erro ao buscar fornecedores. Tente novamente.", {
         id: toastId,
       });
+    }
+  };
+
+  const handleGenerateThumbnail = async (p: any) => {
+    const toastId = toast.loading("✨ Gerando thumbnail com IA...");
+    try {
+      await api.post(`/products/${p.id}/generate-thumbnail`);
+      toast.success("🎨 Thumbnail gerada! Atualize para ver.", { id: toastId });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch {
+      toast.error("Erro ao gerar thumbnail. Verifique a chave OpenAI no .env", { id: toastId });
     }
   };
 
@@ -210,6 +222,7 @@ export default function ProductsPage() {
               onImport={handleImport}
               onGenerateAds={handleGenerateAds}
               onFindSupplier={handleFindSupplier}
+              onGenerateThumbnail={handleGenerateThumbnail}
             />
           ))}
         </div>

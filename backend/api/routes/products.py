@@ -91,6 +91,83 @@ async def refresh_product_images(db: AsyncSession = Depends(get_db)):
     return {"updated": updated, "total": len(products)}
 
 
+@router.post("/{product_id}/generate-thumbnail")
+async def generate_ai_thumbnail(
+    product_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Generate a beautiful AI product thumbnail using OpenAI DALL-E 3.
+    Falls back to an enhanced placehold.co placeholder if OPENAI_API_KEY is not set.
+    """
+    import httpx
+    from backend.core.config import settings
+
+    result = await db.scalars(select(Product).where(Product.id == product_id))
+    product = result.first()
+    if not product:
+        raise HTTPException(404, "Product not found")
+
+    if not settings.OPENAI_API_KEY:
+        # Fallback: enhanced placeholder with category colors
+        CATEGORY_COLORS = {
+            "Beauty & Personal Care": ("4a1942", "f9a8d4"),
+            "Electronics": ("0c1a2e", "7dd3fc"),
+            "Home & Kitchen": ("14532d", "86efac"),
+            "Clothing & Accessories": ("450a0a", "fca5a5"),
+            "Sports & Outdoors": ("431407", "fb923c"),
+            "Health & Wellness": ("052e16", "6ee7b7"),
+            "Toys & Games": ("1e1b4b", "fbbf24"),
+        }
+        bg, fg = CATEGORY_COLORS.get(product.category, ("0f172a", "0ea5e9"))
+        words = (product.name or "product").split()[:3]
+        text = "+".join(w[:8] for w in words)
+        url = f"https://placehold.co/800x800/{bg}/{fg}?text={text}&font=playfair-display"
+        product.image_urls = [url]
+        await db.commit()
+        return {"image_url": url, "source": "placeholder", "product_id": product_id}
+
+    # Use DALL-E 3
+    category = product.category or "product"
+    name_short = (product.name or "product")[:80]
+    prompt = (
+        f"Professional e-commerce product thumbnail photography for: {name_short}. "
+        f"Category: {category}. "
+        "Clean studio background, professional product photography, "
+        "high quality, vibrant colors, sharp focus, commercial style. "
+        "No text, no watermarks, no people."
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/images/generations",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "dall-e-3",
+                    "prompt": prompt,
+                    "n": 1,
+                    "size": "1024x1024",
+                    "quality": "standard",
+                    "style": "natural",
+                },
+            )
+            if resp.status_code != 200:
+                raise HTTPException(502, f"OpenAI error: {resp.text[:200]}")
+
+            image_url = resp.json()["data"][0]["url"]
+            product.image_urls = [image_url]
+            await db.commit()
+            return {"image_url": image_url, "source": "dall-e-3", "product_id": product_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(502, f"Thumbnail generation failed: {str(e)[:100]}")
+
+
 @router.get("/trending", response_model=list[ProductOut])
 async def trending_products(
     hours: int = Query(24, ge=1, le=168),

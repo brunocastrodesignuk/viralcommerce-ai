@@ -10,7 +10,7 @@ import {
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import {
-  usePreferences, applyTheme,
+  usePreferences, applyTheme, useT,
   THEMES, LANGUAGES, CURRENCIES,
   type ThemeId, type LangId, type CurrencyId,
 } from "@/store/preferences";
@@ -289,6 +289,7 @@ export default function SettingsPage() {
 
   const [apiKey] = useState("vc_" + "x".repeat(32));
   const [saving, setSaving] = useState(false);
+  const t = useT();
 
   const copyApiKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -325,9 +326,9 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Configurações</h1>
+          <h1 className="text-2xl font-bold text-white">{t.settings.title}</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Personalize aparência, idioma, moeda e integrações
+            {t.settings.subtitle}
           </p>
         </div>
         <button
@@ -336,12 +337,12 @@ export default function SettingsPage() {
           className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          Salvar Alterações
+          {saving ? t.settings.saving : t.settings.saveChanges}
         </button>
       </div>
 
       {/* ── APARÊNCIA (SKIN/TEMA) ── */}
-      <Section title="Aparência" description="Escolha o tema visual do sistema" icon={Paintbrush}>
+      <Section title={t.settings.appearance} description={t.settings.selectTheme} icon={Paintbrush}>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {THEMES.map((t) => (
             <button
@@ -382,7 +383,7 @@ export default function SettingsPage() {
       </Section>
 
       {/* ── IDIOMA ── */}
-      <Section title="Idioma" description="Selecione o idioma da interface" icon={Languages}>
+      <Section title={t.settings.language} description={t.settings.selectLanguage} icon={Languages}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {LANGUAGES.map((l) => (
             <button
@@ -408,13 +409,13 @@ export default function SettingsPage() {
         <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
           <span className="text-yellow-400 text-sm">⚠️</span>
           <p className="text-xs text-yellow-300">
-            Tradução completa em desenvolvimento. Interface principal já está em Português.
+            {t.settings.selectLanguage}
           </p>
         </div>
       </Section>
 
       {/* ── MOEDA ── */}
-      <Section title="Moeda" description="Escolha a moeda para exibição de preços e margens" icon={DollarSign}>
+      <Section title={t.settings.currency} description={t.settings.selectCurrency} icon={DollarSign}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {CURRENCIES.map((c) => (
             <button
@@ -574,7 +575,7 @@ export default function SettingsPage() {
           className="flex items-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          Salvar Todas as Configurações
+          {saving ? t.settings.saving : t.settings.saveChanges}
         </button>
       </div>
     </div>

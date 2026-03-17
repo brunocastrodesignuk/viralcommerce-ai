@@ -12,6 +12,7 @@ interface ProductCardProps {
   onImport?: (p: Product) => void;
   onGenerateAds?: (p: Product) => void;
   onFindSupplier?: (p: Product) => void;
+  onGenerateThumbnail?: (p: Product) => void;
   onClick?: (p: Product) => void;
 }
 
@@ -20,6 +21,7 @@ export function ProductCard({
   onImport,
   onGenerateAds,
   onFindSupplier,
+  onGenerateThumbnail,
   onClick,
 }: ProductCardProps) {
   const img      = product.image_urls?.[0];
@@ -46,8 +48,8 @@ export function ProductCard({
       className="card hover:border-sky-500/30 cursor-pointer transition-all group"
       onClick={handleCardClick}
     >
-      {/* Image */}
-      <div className="relative h-44 bg-gray-800 rounded-lg mb-4 overflow-hidden">
+      {/* Image — full visual with name overlay */}
+      <div className="relative h-52 bg-gray-800 rounded-lg mb-4 overflow-hidden">
         {img ? (
           <img src={img} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
@@ -55,6 +57,12 @@ export function ProductCard({
             <Package className="w-12 h-12 text-gray-600" />
           </div>
         )}
+        {/* Gradient overlay with product name */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-end p-3">
+          <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2 drop-shadow">
+            {product.name}
+          </h3>
+        </div>
         <div className="absolute top-2 right-2">
           <ViralScoreBadge score={product.viral_score} />
         </div>
@@ -62,11 +70,6 @@ export function ProductCard({
           <span className="badge bg-gray-900/80 text-gray-300 text-xs">{product.category}</span>
         </div>
       </div>
-
-      {/* Info */}
-      <h3 className="font-semibold text-gray-100 text-sm leading-snug mb-2 line-clamp-2">
-        {product.name}
-      </h3>
 
       {/* Price range */}
       <div className="flex items-center justify-between mb-4">
@@ -110,6 +113,17 @@ export function ProductCard({
           className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20"
         />
       </div>
+
+      {/* AI Thumbnail Button */}
+      {onGenerateThumbnail && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onGenerateThumbnail(product); }}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 text-purple-400 text-xs font-medium transition-colors"
+        >
+          <span>✨</span>
+          Gerar Thumbnail com IA
+        </button>
+      )}
     </div>
   );
 }

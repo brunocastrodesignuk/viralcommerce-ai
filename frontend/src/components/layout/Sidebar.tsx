@@ -13,6 +13,7 @@ import {
   Settings,
   Flame,
   Crown,
+  Shield,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useT } from "@/store/preferences";
@@ -29,6 +30,7 @@ export function Sidebar() {
     { href: "/campaigns", label: t.nav.campaigns,  icon: Megaphone },
     { href: "/analytics", label: t.nav.analytics,  icon: BarChart3 },
     { href: "/crawler",   label: t.nav.crawler,    icon: Zap },
+    { href: "/admin",     label: "Admin",           icon: Shield },
   ];
 
   return (

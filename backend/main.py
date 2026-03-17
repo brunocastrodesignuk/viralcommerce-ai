@@ -26,6 +26,7 @@ from backend.api.routes import (
     billing,
     shopify,
     notifications,
+    admin,
 )
 
 log = structlog.get_logger()
@@ -37,6 +38,28 @@ REQUEST_COUNT = Counter(
 REQUEST_LATENCY = Histogram(
     "http_request_duration_seconds", "HTTP request duration", ["endpoint"]
 )
+
+
+_NOTIFIED_VIRAL_IDS: set = set()
+
+async def _viral_alert_loop():
+    """Check every 15 min for products >= 95% viral score and email Pro/Enterprise subscribers."""
+    import asyncio
+    from backend.core.database import AsyncSessionLocal
+    from backend.services.email import send_viral_alert_emails
+
+    await asyncio.sleep(60)  # wait for startup to complete
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                sent, errors = await send_viral_alert_emails(db, min_score=95.0, notified_ids=_NOTIFIED_VIRAL_IDS)
+                if sent:
+                    log.info("Viral alert loop", sent=sent)
+                if errors:
+                    log.warning("Viral alert errors", errors=errors[:3])
+        except Exception as e:
+            log.warning("Viral alert loop error", error=str(e)[:200])
+        await asyncio.sleep(15 * 60)  # every 15 minutes
 
 
 async def _startup_data_refresh():
@@ -116,6 +139,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     # Launch background data refresh (non-blocking)
     asyncio.create_task(_startup_data_refresh())
+    asyncio.create_task(_viral_alert_loop())
     yield
     log.info("Shutting down ViralCommerce AI")
     await close_db()
@@ -171,6 +195,7 @@ def create_app() -> FastAPI:
     app.include_router(billing.router,    prefix=f"{prefix}/billing",    tags=["Billing"])
     app.include_router(shopify.router,        prefix=f"{prefix}/shopify",        tags=["Shopify"])
     app.include_router(notifications.router, prefix=f"{prefix}/notifications", tags=["Notifications"])
+    app.include_router(admin.router,        prefix=f"{prefix}/admin",        tags=["Admin"])
 
     @app.get("/health", tags=["Health"])
     async def health():

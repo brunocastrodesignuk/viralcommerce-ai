@@ -85,6 +85,16 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""
     PROMETHEUS_PORT: int = 9090
 
+    # ── Admin ──────────────────────────────────────────────────
+    ADMIN_SECRET_KEY: str = "admin-change-me-in-production"
+
+    # ── Email / SMTP ───────────────────────────────────────────
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 465
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    SMTP_FROM: str = "noreply@viralcommerce.ai"
+
 
 @lru_cache
 def get_settings() -> Settings:
