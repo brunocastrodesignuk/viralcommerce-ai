@@ -9,6 +9,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "ViralCommerce AI — Plataforma de Descoberta de Produtos Virais",
   description: "Descubra produtos virais, encontre fornecedores, gere anúncios e escale seu e-commerce com IA.",
+  other: {
+    // Prevent Chrome/Google auto-translate from mangling Portuguese UI labels
+    "google": "notranslate",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
