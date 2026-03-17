@@ -6,12 +6,17 @@ import { Bell, Search, LogOut, Settings, User, ChevronDown } from "lucide-react"
 import { useAuthStore } from "@/store/auth";
 import Link from "next/link";
 import { useT } from "@/store/preferences";
+import { api } from "@/lib/api";
 
 export function Topbar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifProducts, setNotifProducts] = useState<any[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
   const t = useT();
 
   // Close dropdown on outside click
@@ -23,6 +28,31 @@ export function Topbar() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    setNotifLoading(true);
+    api.get("/notifications/viral-products/recent", { params: { min_score: 80, hours: 24 } })
+      .then(r => setNotifProducts(r.data || []))
+      .catch(() => setNotifProducts([]))
+      .finally(() => setNotifLoading(false));
+  }, [notifOpen]);
+
+  useEffect(() => {
+    api.get("/notifications/viral-products/recent", { params: { min_score: 80, hours: 24 } })
+      .then(r => setNotifProducts(r.data || []))
+      .catch(() => {});
   }, []);
 
   const handleLogout = () => {
@@ -55,10 +85,73 @@ export function Topbar() {
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-lg transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setNotifOpen(!notifOpen)}
+            className="relative p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <Bell className="w-5 h-5" />
+            {notifProducts.length > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-2 z-50">
+              <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-300">🔥 Alertas Virais (24h)</p>
+                <span className="text-xs text-gray-600">{notifProducts.length} novos</span>
+              </div>
+              {notifLoading ? (
+                <div className="flex items-center justify-center h-20">
+                  <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : notifProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-20 text-gray-600 text-xs">
+                  <Bell className="w-6 h-6 mb-1 opacity-30" />
+                  Nenhum produto viral nas últimas 24h
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-y-auto">
+                  {notifProducts.slice(0, 8).map((p: any) => (
+                    <Link
+                      key={p.id}
+                      href={`/products/${p.id}`}
+                      onClick={() => setNotifOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-800 overflow-hidden flex-shrink-0">
+                        {p.image ? (
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs">📦</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-200 truncate">{p.name}</p>
+                        <p className="text-xs text-gray-500">{p.category}</p>
+                      </div>
+                      <span className={`text-xs font-bold flex-shrink-0 ${
+                        p.viral_score >= 95 ? "text-red-400" : p.viral_score >= 85 ? "text-orange-400" : "text-yellow-400"
+                      }`}>
+                        {Math.round(p.viral_score)}🔥
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <div className="px-4 py-2 border-t border-gray-800">
+                <Link
+                  href="/products"
+                  onClick={() => setNotifOpen(false)}
+                  className="block text-center text-xs text-sky-400 hover:text-sky-300"
+                >
+                  Ver todos os produtos virais →
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User menu */}
         <div className="relative" ref={menuRef}>
