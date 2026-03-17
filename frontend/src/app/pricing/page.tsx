@@ -13,6 +13,9 @@ interface PaymentConfig {
   mercadopago: boolean;
   any_configured: boolean;
   whatsapp: string;
+  stripe_methods?: string[];
+  mp_methods?: string[];
+  all_methods?: string[];
 }
 
 const PLANS = [
@@ -172,16 +175,28 @@ export default function PricingPage() {
           </p>
           {/* Payment provider badges */}
           {payConfig && (
-            <div className="flex items-center justify-center gap-2 mt-4">
-              {payConfig.mercadopago && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-xs text-sky-400 font-medium">
-                  ✅ Mercado Pago (PIX, boleto, cartão)
-                </span>
-              )}
-              {payConfig.stripe && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-xs text-purple-400 font-medium">
-                  ✅ Stripe (cartão internacional)
-                </span>
+            <div className="mt-5 space-y-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {payConfig.mercadopago && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 rounded-full text-xs text-sky-400 font-medium">
+                    ✅ Mercado Pago — PIX · Boleto · Cartão
+                  </span>
+                )}
+                {payConfig.stripe && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-xs text-purple-400 font-medium">
+                    ✅ Stripe — Card · Apple Pay · Google Pay
+                  </span>
+                )}
+                {payConfig.stripe && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-xs text-green-400 font-medium">
+                    ✅ PayPal · Klarna · Link
+                  </span>
+                )}
+              </div>
+              {payConfig.any_configured && (
+                <p className="text-xs text-gray-500 text-center">
+                  🌍 Aceito em 135+ países • SSL seguro • Cancele quando quiser
+                </p>
               )}
             </div>
           )}
@@ -255,7 +270,7 @@ export default function PricingPage() {
                   </div>
                   {plan.price > 0 && (
                     <p className="text-xs text-gray-600 mt-1">
-                      PIX • Boleto • Cartão de crédito
+                      PIX · Boleto · Cartão · Apple Pay · Google Pay · PayPal
                     </p>
                   )}
                 </div>

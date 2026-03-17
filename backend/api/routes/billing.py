@@ -57,18 +57,24 @@ async def create_checkout_session(
 
     try:
         session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
+            # automatic_payment_methods enables: card, Apple Pay, Google Pay,
+            # Link (Stripe's 1-click checkout), Klarna, Afterpay, PayPal (where available)
+            automatic_payment_methods={"enabled": True},
             mode="subscription",
             line_items=[{"price": body.price_id, "quantity": 1}],
             customer_email=current_user.email,
             client_reference_id=str(current_user.id),
             success_url=body.success_url + "&session_id={CHECKOUT_SESSION_ID}",
             cancel_url=body.cancel_url,
+            allow_promotion_codes=True,
+            billing_address_collection="auto",
             metadata={"user_id": str(current_user.id)},
             subscription_data={
                 "trial_period_days": 10,   # 10-day free trial
                 "metadata": {"user_id": str(current_user.id)},
             },
+            # Locale: auto-detect based on user's browser
+            locale="auto",
         )
         return {"checkout_url": session.url, "session_id": session.id}
 
@@ -301,12 +307,31 @@ async def mercadopago_webhook(
 @router.get("/payment-config")
 async def payment_config():
     """Return which payment providers are configured (for frontend detection)."""
-    stripe_configured = bool(os.getenv("STRIPE_SECRET_KEY", ""))
-    mp_configured = bool(os.getenv("MERCADOPAGO_ACCESS_TOKEN", ""))
+    stripe_key = os.getenv("STRIPE_SECRET_KEY", "")
+    mp_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
+    stripe_configured = bool(stripe_key)
+    mp_configured = bool(mp_token)
     whatsapp = os.getenv("SUPPORT_WHATSAPP", "")
+
+    # When Stripe is configured, automatic_payment_methods enables all of these
+    stripe_methods = (
+        ["card", "apple_pay", "google_pay", "link", "paypal", "klarna", "afterpay_clearpay"]
+        if stripe_configured
+        else []
+    )
+    # Mercado Pago methods (Brazil)
+    mp_methods = (
+        ["pix", "boleto", "credit_card", "debit_card"]
+        if mp_configured
+        else []
+    )
+
     return {
         "stripe": stripe_configured,
         "mercadopago": mp_configured,
         "any_configured": stripe_configured or mp_configured,
         "whatsapp": whatsapp,
+        "stripe_methods": stripe_methods,
+        "mp_methods": mp_methods,
+        "all_methods": stripe_methods + mp_methods,
     }
