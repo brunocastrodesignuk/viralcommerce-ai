@@ -57,15 +57,15 @@ async def list_products(
 
 @router.post("/refresh-images")
 async def refresh_product_images(db: AsyncSession = Depends(get_db)):
-    """Batch-update all products with missing image_urls using placehold.co placeholders."""
-    CATEGORY_COLORS = {
-        "Beauty & Personal Care": ("1e1b4b", "a78bfa", "beauty"),
-        "Electronics": ("0f172a", "38bdf8", "tech"),
-        "Home & Kitchen": ("14532d", "86efac", "home"),
-        "Clothing & Accessories": ("4c0519", "fda4af", "fashion"),
-        "Sports & Outdoors": ("1c1917", "fdba74", "sports"),
-        "Health & Wellness": ("052e16", "6ee7b7", "health"),
-        "Toys & Games": ("1e1b4b", "fbbf24", "toys"),
+    """Batch-update all products with missing image_urls using loremflickr real-looking photos."""
+    CATEGORY_KEYWORDS = {
+        "Beauty & Personal Care": "beauty,skincare,cosmetics",
+        "Electronics": "electronics,gadget,technology",
+        "Home & Kitchen": "home,kitchen,decor",
+        "Clothing & Accessories": "fashion,clothing,accessories",
+        "Sports & Outdoors": "sports,fitness,exercise",
+        "Health & Wellness": "health,wellness,medicine",
+        "Toys & Games": "toys,children,play",
     }
     result = await db.scalars(
         select(Product).where(Product.status == "active")
@@ -78,14 +78,13 @@ async def refresh_product_images(db: AsyncSession = Depends(get_db)):
             and p.image_urls != []
             and p.image_urls != [""]
             and not any("via.placeholder.com" in url for url in p.image_urls)
+            and not any("placehold.co" in url for url in p.image_urls)
         )
         if has_good_image:
             continue
-        bg, fg, hint = CATEGORY_COLORS.get(p.category, ("0f172a", "38bdf8", "product"))
-        # Build a short text hint from the product name
-        words = (p.name or hint).split()[:2]
-        text = "+".join(w[:6] for w in words) if words else hint
-        p.image_urls = [f"https://placehold.co/400x400/{bg}/{fg}?text={text}"]
+        keyword = CATEGORY_KEYWORDS.get(p.category, "product,shop,retail")
+        seed = abs(hash(p.name or "product")) % 9999
+        p.image_urls = [f"https://loremflickr.com/400/400/{keyword}?lock={seed}"]
         updated += 1
     await db.commit()
     return {"updated": updated, "total": len(products)}
@@ -109,23 +108,22 @@ async def generate_ai_thumbnail(
         raise HTTPException(404, "Product not found")
 
     if not settings.OPENAI_API_KEY:
-        # Fallback: enhanced placeholder with category colors
-        CATEGORY_COLORS = {
-            "Beauty & Personal Care": ("4a1942", "f9a8d4"),
-            "Electronics": ("0c1a2e", "7dd3fc"),
-            "Home & Kitchen": ("14532d", "86efac"),
-            "Clothing & Accessories": ("450a0a", "fca5a5"),
-            "Sports & Outdoors": ("431407", "fb923c"),
-            "Health & Wellness": ("052e16", "6ee7b7"),
-            "Toys & Games": ("1e1b4b", "fbbf24"),
+        # Fallback: loremflickr with category-specific keywords
+        CATEGORY_KEYWORDS = {
+            "Beauty & Personal Care": "beauty,skincare,cosmetics",
+            "Electronics": "electronics,gadget,technology",
+            "Home & Kitchen": "home,kitchen,decor",
+            "Clothing & Accessories": "fashion,clothing,accessories",
+            "Sports & Outdoors": "sports,fitness,exercise",
+            "Health & Wellness": "health,wellness,medicine",
+            "Toys & Games": "toys,children,play",
         }
-        bg, fg = CATEGORY_COLORS.get(product.category, ("0f172a", "0ea5e9"))
-        words = (product.name or "product").split()[:3]
-        text = "+".join(w[:8] for w in words)
-        url = f"https://placehold.co/800x800/{bg}/{fg}?text={text}&font=playfair-display"
+        keyword = CATEGORY_KEYWORDS.get(product.category, "product,shop,retail")
+        seed = abs(hash(product.name or "product")) % 9999
+        url = f"https://loremflickr.com/800/800/{keyword}?lock={seed}"
         product.image_urls = [url]
         await db.commit()
-        return {"image_url": url, "source": "placeholder", "product_id": product_id}
+        return {"image_url": url, "source": "loremflickr", "product_id": product_id}
 
     # Use DALL-E 3
     category = product.category or "product"

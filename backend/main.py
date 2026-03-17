@@ -76,27 +76,27 @@ async def _startup_data_refresh():
                 # 1. Refresh missing product images
                 result = await db.scalars(select(Product).where(Product.status == "active"))
                 products = result.all()
-                CATEGORY_COLORS = {
-                    "Beauty & Personal Care": ("1e1b4b", "a78bfa", "beauty"),
-                    "Electronics": ("0f172a", "38bdf8", "tech"),
-                    "Home & Kitchen": ("14532d", "86efac", "home"),
-                    "Clothing & Accessories": ("4c0519", "fda4af", "fashion"),
-                    "Sports & Outdoors": ("1c1917", "fdba74", "sports"),
-                    "Health & Wellness": ("052e16", "6ee7b7", "health"),
-                    "Toys & Games": ("1e1b4b", "fbbf24", "toys"),
+                CATEGORY_IMAGE_KEYS = {
+                    "Beauty & Personal Care": "beauty,skincare,cosmetics",
+                    "Electronics": "electronics,gadget,technology",
+                    "Home & Kitchen": "home,kitchen,decor",
+                    "Clothing & Accessories": "fashion,clothing,accessories",
+                    "Sports & Outdoors": "sports,fitness,exercise",
+                    "Health & Wellness": "health,wellness,medicine",
+                    "Toys & Games": "toys,children,play",
                 }
                 updated = 0
                 for p in products:
                     has_good_image = (
                         p.image_urls and p.image_urls != [] and p.image_urls != [""]
                         and not any("via.placeholder.com" in u for u in p.image_urls)
+                        and not any("placehold.co" in u for u in p.image_urls)
                     )
                     if has_good_image:
                         continue
-                    bg, fg, hint = CATEGORY_COLORS.get(p.category, ("0f172a", "38bdf8", "product"))
-                    words = (p.name or hint).split()[:2]
-                    text = "+".join(w[:6] for w in words) if words else hint
-                    p.image_urls = [f"https://placehold.co/400x400/{bg}/{fg}?text={text}"]
+                    keyword = CATEGORY_IMAGE_KEYS.get(p.category, "product,shop,retail")
+                    seed = abs(hash(p.name or "product")) % 9999
+                    p.image_urls = [f"https://loremflickr.com/400/400/{keyword}?lock={seed}"]
                     updated += 1
                 if updated:
                     await db.commit()

@@ -164,7 +164,7 @@ def _make_product(item: tuple, rng: random.Random) -> dict:
         "rating": round(rng.uniform(4.3, 4.9), 1),
         "viral_score": round(min(100, viral_score + score_var), 1),
         "tags": tags,
-        "image_url": f"https://placehold.co/400x400/0f172a/38bdf8?text={img_hint}",
+        "image_url": f"https://loremflickr.com/400/400/{img_hint.replace('+', ',')}?lock={abs(hash(name)) % 9999}",
         "product_url": f"https://www.google.com/search?q={name.replace(' ', '+')}",
         "source": f"curated_verified",
     }
