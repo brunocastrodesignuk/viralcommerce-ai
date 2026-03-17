@@ -179,3 +179,13 @@ export function convertPrice(usdPrice: number, currencyId: CurrencyId): string {
   const converted = usdPrice * c.rate;
   return `${c.symbol}${converted.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
+
+// ─── i18n Hook ────────────────────────────────────────────────────────────────
+
+import { getT, type Translations } from "@/lib/i18n";
+
+/** Returns translation object for current language */
+export function useT(): Translations {
+  const { language } = usePreferences();
+  return getT(language);
+}

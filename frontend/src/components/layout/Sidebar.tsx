@@ -15,19 +15,21 @@ import {
   Crown,
 } from "lucide-react";
 import { clsx } from "clsx";
-
-const NAV_ITEMS = [
-  { href: "/",              label: "Painel",           icon: LayoutDashboard },
-  { href: "/products",      label: "Produtos",         icon: ShoppingBag },
-  { href: "/trends",        label: "Radar de Tendências", icon: TrendingUp },
-  { href: "/suppliers",     label: "Fornecedores",     icon: Truck },
-  { href: "/campaigns",     label: "Campanhas",        icon: Megaphone },
-  { href: "/analytics",     label: "Análises",         icon: BarChart3 },
-  { href: "/crawler",       label: "Rastreador",       icon: Zap },
-];
+import { useT } from "@/store/preferences";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const t = useT();
+
+  const NAV_ITEMS = [
+    { href: "/",          label: t.nav.dashboard,  icon: LayoutDashboard },
+    { href: "/products",  label: t.nav.products,   icon: ShoppingBag },
+    { href: "/trends",    label: t.nav.trends,     icon: TrendingUp },
+    { href: "/suppliers", label: t.nav.suppliers,  icon: Truck },
+    { href: "/campaigns", label: t.nav.campaigns,  icon: Megaphone },
+    { href: "/analytics", label: t.nav.analytics,  icon: BarChart3 },
+    { href: "/crawler",   label: t.nav.crawler,    icon: Zap },
+  ];
 
   return (
     <aside className="w-64 flex flex-col border-r" style={{ backgroundColor: "var(--vc-card)", borderColor: "var(--vc-border)" }}>
@@ -78,17 +80,17 @@ export function Sidebar() {
           )}
         >
           <Crown className="w-4 h-4" />
-          Preços
+          {t.nav.pricing}
         </Link>
         <Link
           href="/settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors"
         >
           <Settings className="w-4 h-4" />
-          Configurações
+          {t.nav.settings}
         </Link>
         <div className="mt-3 mx-3 p-3 bg-gradient-to-br from-brand-900/50 to-purple-900/30 rounded-lg border border-brand-500/20">
-          <p className="text-xs font-semibold text-brand-400">Plano PRO</p>
+          <p className="text-xs font-semibold text-brand-400">{t.common.plan} PRO</p>
           <p className="text-xs text-gray-400 mt-1">Produtos e campanhas ilimitados</p>
         </div>
       </div>

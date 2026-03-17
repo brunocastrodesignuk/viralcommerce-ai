@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { analyticsApi, productsApi, trendsApi, crawlerApi } from "@/lib/api";
 import { ViralTimeline } from "@/components/charts/ViralTimeline";
 import { ProductCard } from "@/components/cards/ProductCard";
-import { usePreferences, applyTheme } from "@/store/preferences";
+import { usePreferences, applyTheme, useT } from "@/store/preferences";
 import {
   TrendingUp, Eye, Zap, DollarSign,
   Activity, Globe, BarChart2, ArrowUpRight, X,
@@ -16,6 +16,8 @@ import toast from "react-hot-toast";
 // ─── Live Feed Panel ──────────────────────────────────────────────────────────
 
 function LiveFeedPanel({ onClose }: { onClose: () => void }) {
+  const t = useT();
+
   const { data: trending } = useQuery({
     queryKey: ["live-feed-products"],
     queryFn: () => productsApi.trending(24, 15).then((r) => r.data),
@@ -42,7 +44,7 @@ function LiveFeedPanel({ onClose }: { onClose: () => void }) {
         <div className="sticky top-0 bg-gray-950 border-b border-gray-800 px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <h2 className="font-semibold text-white">Transmissão ao Vivo</h2>
+            <h2 className="font-semibold text-white">{t.dashboard.liveFeed}</h2>
           </div>
           <button
             onClick={onClose}
@@ -130,7 +132,7 @@ function LiveFeedPanel({ onClose }: { onClose: () => void }) {
         {/* Recent jobs */}
         <div className="px-5 py-4 border-t border-gray-800">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">
-            Jobs Recentes
+            {t.crawler.recentJobs}
           </p>
           <div className="space-y-2">
             {(jobs as any[])?.slice(0, 5).map((job: any) => (
@@ -166,6 +168,7 @@ export default function DashboardPage() {
   const [showLiveFeed, setShowLiveFeed] = useState(false);
   const [scanning, setScanning] = useState(false);
   const { theme } = usePreferences();
+  const t = useT();
 
   // Apply saved theme on mount
   useEffect(() => { applyTheme(theme); }, [theme]);
@@ -223,8 +226,8 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Inteligência de produto viral em tempo real</p>
+            <h1 className="text-2xl font-bold text-white">{t.dashboard.title}</h1>
+            <p className="text-sm text-gray-400 mt-0.5">{t.dashboard.subtitle}</p>
           </div>
           <div className="flex gap-3">
             <button
@@ -232,7 +235,7 @@ export default function DashboardPage() {
               className="btn-secondary text-sm flex items-center gap-2"
             >
               <Activity className="w-4 h-4" />
-              Transmissão ao Vivo
+              {t.dashboard.liveFeed}
             </button>
             <button
               onClick={handleScanNow}
@@ -240,7 +243,7 @@ export default function DashboardPage() {
               className="btn-primary text-sm flex items-center gap-2 disabled:opacity-60"
             >
               {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              {scanning ? "Escaneando..." : "Escanear Agora"}
+              {scanning ? t.dashboard.scanning : t.dashboard.scanNow}
             </button>
           </div>
         </div>
@@ -249,27 +252,27 @@ export default function DashboardPage() {
         <div className="grid grid-cols-4 gap-4">
           <KpiCard
             icon={<TrendingUp className="w-5 h-5 text-red-400" />}
-            label="Produtos Virais (24h)"
+            label={t.dashboard.viralProducts24h}
             value={overview?.viral_products_24h ?? "—"}
             change="+12%"
             positive
           />
           <KpiCard
             icon={<Eye className="w-5 h-5 text-brand-400" />}
-            label="Vídeos Rastreados Hoje"
+            label={t.dashboard.videosToday}
             value={overview?.videos_crawled_today?.toLocaleString() ?? "—"}
             change="+8%"
             positive
           />
           <KpiCard
             icon={<Globe className="w-5 h-5 text-purple-400" />}
-            label="Plataforma Principal"
+            label={t.dashboard.topPlatform}
             value={overview?.top_platform ?? "TikTok"}
             sublabel="Conteúdo mais viral"
           />
           <KpiCard
             icon={<DollarSign className="w-5 h-5 text-green-400" />}
-            label="Margem de Lucro Média"
+            label={t.dashboard.avgMargin}
             value="380%"
             change="+5%"
             positive
@@ -281,15 +284,15 @@ export default function DashboardPage() {
           {/* Viral Timeline — 2 cols */}
           <div className="col-span-2 card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-100">Linha do Tempo Viral</h2>
-              <span className="text-xs text-gray-500">Últimas 24 horas</span>
+              <h2 className="font-semibold text-gray-100">{t.dashboard.viralTimeline}</h2>
+              <span className="text-xs text-gray-500">{t.dashboard.last24h}</span>
             </div>
             <ViralTimeline data={timeline ?? []} />
           </div>
 
           {/* Trending Hashtags — 1 col */}
           <div className="card">
-            <h2 className="font-semibold text-gray-100 mb-4">Hashtags em Alta</h2>
+            <h2 className="font-semibold text-gray-100 mb-4">{t.dashboard.trendingHashtags}</h2>
             <div className="space-y-2">
               {(hashtags as any[])?.slice(0, 8).map((h: any, i: number) => (
                 <div key={h.id || i} className="flex items-center justify-between">
@@ -339,9 +342,9 @@ export default function DashboardPage() {
         {/* Trending Products */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-100">Produtos que são Tendência Agora</h2>
+            <h2 className="font-semibold text-gray-100">{t.dashboard.trendingNow}</h2>
             <a href="/products" className="text-sm text-brand-400 hover:text-brand-300 flex items-center gap-1">
-              Ver tudo <ArrowUpRight className="w-3 h-3" />
+              {t.dashboard.seeAll} <ArrowUpRight className="w-3 h-3" />
             </a>
           </div>
           <div className="grid grid-cols-4 gap-4">

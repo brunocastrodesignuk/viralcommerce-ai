@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import {
   Key, Globe, Bell, Shield, ChevronRight,
   Eye, EyeOff, Check, Copy, RefreshCw, Loader2,
-  Paintbrush, Languages, DollarSign,
+  Paintbrush, Languages, DollarSign, ShoppingBag, Link2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { api } from "@/lib/api";
 import {
   usePreferences, applyTheme,
   THEMES, LANGUAGES, CURRENCIES,
@@ -84,6 +86,167 @@ function Toggle({ label, description, enabled, onChange }: {
       >
         <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
       </button>
+    </div>
+  );
+}
+
+// ─── Webhook Notification Section ────────────────────────────────────────────
+
+function WebhookNotificationSection() {
+  const [webhookUrl, setWebhookUrl] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("vc_webhook_url") || "" : ""
+  );
+  const [minScore, setMinScore] = useState(75);
+
+  const testMutation = useMutation({
+    mutationFn: () =>
+      api.post("/notifications/webhook/test", {
+        webhook_url: webhookUrl.trim(),
+        min_viral_score: minScore,
+      }).then(r => r.data),
+    onSuccess: () => {
+      localStorage.setItem("vc_webhook_url", webhookUrl.trim());
+      toast.success("✅ Notificação de teste enviada!");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Erro ao enviar para webhook"),
+  });
+
+  const checkMutation = useMutation({
+    mutationFn: () =>
+      api.post("/notifications/webhook/check-viral", {
+        webhook_url: webhookUrl.trim(),
+        min_viral_score: minScore,
+      }).then(r => r.data),
+    onSuccess: (data) => {
+      localStorage.setItem("vc_webhook_url", webhookUrl.trim());
+      toast.success(`📢 ${data.sent} notificações enviadas de ${data.total_found} produtos virais`);
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Erro ao verificar produtos virais"),
+  });
+
+  return (
+    <div className="pt-4 border-t border-gray-800 space-y-3">
+      <div>
+        <label className="block text-xs text-gray-400 mb-1.5">
+          Webhook URL (Discord / Slack / Zapier)
+        </label>
+        <input
+          type="url"
+          value={webhookUrl}
+          onChange={e => setWebhookUrl(e.target.value)}
+          placeholder="https://discord.com/api/webhooks/... ou https://hooks.slack.com/..."
+          className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-500"
+        />
+        <p className="text-xs text-gray-600 mt-1">
+          Suporta Discord Webhooks, Slack Incoming Webhooks, Zapier, e qualquer URL HTTP POST
+        </p>
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1.5">
+          Score mínimo para alerta: <span className="text-brand-400 font-bold">{minScore}</span>
+        </label>
+        <input
+          type="range" min={50} max={95} step={5}
+          value={minScore} onChange={e => setMinScore(Number(e.target.value))}
+          className="w-full accent-sky-500"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => testMutation.mutate()}
+          disabled={!webhookUrl || testMutation.isPending}
+          className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 rounded-lg text-xs font-medium transition-colors"
+        >
+          {testMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+          Enviar Teste
+        </button>
+        <button
+          onClick={() => checkMutation.mutate()}
+          disabled={!webhookUrl || checkMutation.isPending}
+          className="flex items-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+        >
+          {checkMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+          Verificar Produtos Virais Agora
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Shopify Connection Section ───────────────────────────────────────────────
+
+function ShopifyConnectionSection() {
+  const [storeUrl, setStoreUrl] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("shopify_store_url") || "" : ""
+  );
+  const [accessToken, setAccessToken] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("shopify_access_token") || "" : ""
+  );
+  const [connected, setConnected] = useState<{ shop_name: string } | null>(null);
+
+  const testMutation = useMutation({
+    mutationFn: () =>
+      api.post("/shopify/test-connection", {
+        shopify_store_url: storeUrl.trim(),
+        shopify_access_token: accessToken.trim(),
+      }).then(r => r.data),
+    onSuccess: (data) => {
+      setConnected(data);
+      localStorage.setItem("shopify_store_url", storeUrl.trim());
+      localStorage.setItem("shopify_access_token", accessToken.trim());
+      toast.success(`✅ Shopify conectado: ${data.shop_name}`);
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? "Erro ao conectar com Shopify"),
+  });
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-800">
+        <div className="p-2 bg-green-500/10 rounded-lg">
+          <ShoppingBag className="w-4 h-4 text-green-400" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-white">Integração Shopify</h2>
+          <p className="text-xs text-gray-500">Importe produtos virais diretamente para sua loja Shopify</p>
+        </div>
+        {connected && (
+          <span className="ml-auto text-xs bg-green-500/10 text-green-400 px-2 py-1 rounded-full">
+            ✓ {connected.shop_name}
+          </span>
+        )}
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 text-xs text-gray-400 space-y-1">
+          <p className="text-blue-400 font-semibold">Como configurar:</p>
+          <p>1. Shopify Admin → Configurações → Apps e canais de vendas → Desenvolver apps</p>
+          <p>2. Criar app → Permissões da API Admin → ativar <code className="text-blue-400">write_products</code></p>
+          <p>3. Instalar app → copiar o Token de Acesso gerado</p>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1.5">URL da Loja</label>
+          <input
+            type="text" value={storeUrl} onChange={e => setStoreUrl(e.target.value)}
+            placeholder="minha-loja.myshopify.com"
+            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1.5">Token de Acesso Admin</label>
+          <input
+            type="password" value={accessToken} onChange={e => setAccessToken(e.target.value)}
+            placeholder="shpat_xxxxxxxxxxxxxxxxxxxxxxxx"
+            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-brand-500"
+          />
+        </div>
+        <button
+          onClick={() => testMutation.mutate()}
+          disabled={!storeUrl || !accessToken || testMutation.isPending}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {testMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
+          Conectar Shopify
+        </button>
+      </div>
     </div>
   );
 }
@@ -370,7 +533,11 @@ export default function SettingsPage() {
             description="Quando um fornecedor com alta margem é descoberto para um produto rastreado"
             enabled={notifySupplier} onChange={setNotifySupplier} />
         </div>
+        <WebhookNotificationSection />
       </Section>
+
+      {/* ── SHOPIFY ── */}
+      <ShopifyConnectionSection />
 
       {/* ── ZONA DE PERIGO ── */}
       <div className="bg-gray-900 border border-red-900/50 rounded-xl overflow-hidden">

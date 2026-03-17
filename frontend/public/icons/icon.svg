@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#030712"/>
+  <!-- Outer glow ring -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#0ea5e9" stroke-width="3" opacity="0.3"/>
+  <!-- Lightning bolt / Zap icon (ViralCommerce) -->
+  <path d="M300 80 L180 270 L250 270 L212 432 L340 230 L268 230 Z" fill="#0ea5e9" opacity="0.95"/>
+  <!-- Trend line accent -->
+  <path d="M100 340 Q150 280 200 300 Q250 320 300 260 Q350 200 400 220" fill="none" stroke="#0ea5e9" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+</svg>

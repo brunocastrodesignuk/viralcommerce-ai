@@ -22,6 +22,19 @@ function AuthSync() {
   return null;
 }
 
+/** Registers the PWA service worker */
+function PWARegistrar() {
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("[PWA] Service worker registered:", reg.scope))
+        .catch((err) => console.warn("[PWA] Service worker registration failed:", err));
+    }
+  }, []);
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -39,6 +52,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthSync />
+      <PWARegistrar />
       {children}
       <Toaster
         position="top-right"

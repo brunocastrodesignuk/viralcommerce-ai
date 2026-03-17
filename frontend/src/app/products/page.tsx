@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { productsApi, api } from "@/lib/api";
 import { ProductCard } from "@/components/cards/ProductCard";
+import { ShopifyImportModal } from "@/components/modals/ShopifyImportModal";
 import { TrendingUp, Package, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
+import { useT } from "@/store/preferences";
 
 const CATEGORIES = [
   "All",
@@ -35,6 +37,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("viral_score");
   const [refreshingImages, setRefreshingImages] = useState(false);
+  const [shopifyProduct, setShopifyProduct] = useState<any>(null);
+  const t = useT();
 
   const handleRefreshImages = async () => {
     setRefreshingImages(true);
@@ -63,8 +67,8 @@ export default function ProductsPage() {
     retry: 2,
   });
 
-  const handleImport = async (p: any) => {
-    toast.success(`✅ ${p.name} importado para sua loja!`);
+  const handleImport = (p: any) => {
+    setShopifyProduct(p);
   };
 
   const handleGenerateAds = async (p: any) => {
@@ -97,13 +101,20 @@ export default function ProductsPage() {
   };
 
   return (
+    <>
+    {shopifyProduct && (
+      <ShopifyImportModal
+        product={shopifyProduct}
+        onClose={() => setShopifyProduct(null)}
+      />
+    )}
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Produtos Virais</h1>
+          <h1 className="text-2xl font-bold text-white">{t.products.title}</h1>
           <p className="text-sm text-gray-400">
-            {data?.total?.toLocaleString() ?? "—"} produtos descobertos
+            {data?.total?.toLocaleString() ?? "—"} {t.products.discovered}
           </p>
         </div>
         <button
@@ -112,7 +123,7 @@ export default function ProductsPage() {
           className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${refreshingImages ? "animate-spin" : ""}`} />
-          {refreshingImages ? "Atualizando..." : "Atualizar Imagens"}
+          {refreshingImages ? t.products.refreshing : t.products.refreshImages}
         </button>
       </div>
 
@@ -142,8 +153,8 @@ export default function ProductsPage() {
           onChange={(e) => setSortBy(e.target.value)}
           className="bg-gray-800 border border-gray-700 text-sm text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500"
         >
-          <option value="viral_score">Top Viral</option>
-          <option value="updated_at">Mais Recentes</option>
+          <option value="viral_score">{t.products.topViral}</option>
+          <option value="updated_at">{t.products.newest}</option>
         </select>
 
         <div className="flex items-center gap-2">
@@ -187,7 +198,7 @@ export default function ProductsPage() {
         <div className="flex flex-col items-center justify-center h-64 text-gray-500">
           <TrendingUp className="w-12 h-12 mb-3 opacity-30" />
           <p className="text-sm text-center">
-            Nenhum produto encontrado. Inicie o Crawler para descobrir produtos virais!
+            {t.products.noProducts}
           </p>
         </div>
       ) : (
@@ -227,5 +238,6 @@ export default function ProductsPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
