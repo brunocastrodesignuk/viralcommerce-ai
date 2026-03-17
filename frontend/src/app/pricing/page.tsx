@@ -1,18 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Zap, Crown, Building2, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, Zap, Crown, Building2, Loader2, MessageCircle, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { usePreferences, convertPrice, useT } from "@/store/preferences";
 
+interface PaymentConfig {
+  stripe: boolean;
+  mercadopago: boolean;
+  any_configured: boolean;
+  whatsapp: string;
+}
+
 const PLANS = [
   {
     id: "free",
     name: "Gratuito",
     price: 0,
+    priceBRL: 0,
     interval: "para sempre",
     icon: Zap,
     color: "gray",
@@ -31,6 +39,7 @@ const PLANS = [
     id: "pro",
     name: "Pro",
     price: 47,
+    priceBRL: 47,
     interval: "mês",
     icon: Crown,
     color: "sky",
@@ -52,6 +61,7 @@ const PLANS = [
     id: "enterprise",
     name: "Empresarial",
     price: 197,
+    priceBRL: 197,
     interval: "mês",
     icon: Building2,
     color: "purple",
@@ -65,7 +75,7 @@ const PLANS = [
       "Gerente de conta dedicado",
       "SLA 99,9% de uptime",
     ],
-    cta: "Falar com Vendas",
+    cta: "Assinar Empresarial",
     priceId: process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID ?? "price_enterprise",
   },
 ];
@@ -73,8 +83,15 @@ const PLANS = [
 export default function PricingPage() {
   const { isAuthenticated, user } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
+  const [payConfig, setPayConfig] = useState<PaymentConfig | null>(null);
   const { currency } = usePreferences();
   const t = useT();
+
+  useEffect(() => {
+    api.get("/billing/payment-config")
+      .then((r) => setPayConfig(r.data))
+      .catch(() => setPayConfig({ stripe: false, mercadopago: false, any_configured: false, whatsapp: "" }));
+  }, []);
 
   const handleSubscribe = async (plan: typeof PLANS[0]) => {
     if (!plan.priceId || plan.id === "free") {
@@ -89,25 +106,58 @@ export default function PricingPage() {
       return;
     }
 
+    // Enterprise: contact via WhatsApp or email
     if (plan.id === "enterprise") {
-      window.open("mailto:sales@viralcommerce.ai?subject=Plano Empresarial", "_blank");
+      const wa = payConfig?.whatsapp;
+      if (wa) {
+        const msg = encodeURIComponent(`Olá! Tenho interesse no Plano Empresarial do ViralCommerce AI.`);
+        window.open(`https://wa.me/${wa.replace(/\D/g, "")}?text=${msg}`, "_blank");
+      } else {
+        window.open("mailto:contato@viralcommerce.ai?subject=Plano Empresarial", "_blank");
+      }
+      return;
+    }
+
+    // No payment configured
+    if (!payConfig?.any_configured) {
+      const wa = payConfig?.whatsapp;
+      if (wa) {
+        const msg = encodeURIComponent(`Olá! Quero assinar o Plano ${plan.name} do ViralCommerce AI.`);
+        window.open(`https://wa.me/${wa.replace(/\D/g, "")}?text=${msg}`, "_blank");
+      } else {
+        toast.error("Sistema de pagamento ainda não configurado. Entre em contato com o suporte.");
+      }
       return;
     }
 
     setLoading(plan.id);
     try {
-      const { data } = await api.post("/billing/create-checkout-session", {
-        price_id: plan.priceId,
-        success_url: `${window.location.origin}/settings?payment=success`,
-        cancel_url: `${window.location.origin}/pricing`,
-      });
-      window.location.href = data.checkout_url;
+      // Prefer Mercado Pago (Brazilian), fallback to Stripe
+      if (payConfig?.mercadopago) {
+        const { data } = await api.post("/billing/create-mp-preference", {
+          plan_id: plan.id,
+          plan_name: plan.name,
+          price: plan.priceBRL,
+          success_url: `${window.location.origin}/settings?payment=success`,
+          cancel_url: `${window.location.origin}/pricing`,
+        });
+        window.location.href = data.checkout_url;
+      } else {
+        const { data } = await api.post("/billing/create-checkout-session", {
+          price_id: plan.priceId,
+          success_url: `${window.location.origin}/settings?payment=success`,
+          cancel_url: `${window.location.origin}/pricing`,
+        });
+        window.location.href = data.checkout_url;
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.detail ?? "Falha ao iniciar checkout. Tente novamente.");
     } finally {
       setLoading(null);
     }
   };
+
+  const noPayment = payConfig !== null && !payConfig.any_configured;
 
   return (
     <div className="py-8 px-4">
@@ -120,7 +170,36 @@ export default function PricingPage() {
           <p className="text-gray-400 text-lg max-w-xl mx-auto">
             {t.pricing.subtitle}
           </p>
+          {/* Payment provider badges */}
+          {payConfig && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              {payConfig.mercadopago && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-xs text-sky-400 font-medium">
+                  ✅ Mercado Pago (PIX, boleto, cartão)
+                </span>
+              )}
+              {payConfig.stripe && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-xs text-purple-400 font-medium">
+                  ✅ Stripe (cartão internacional)
+                </span>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* No payment warning banner */}
+        {noPayment && (
+          <div className="mb-8 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-400">Pagamentos não configurados</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Configure <code className="text-amber-300">MERCADOPAGO_ACCESS_TOKEN</code> ou <code className="text-amber-300">STRIPE_SECRET_KEY</code> no arquivo <code className="text-amber-300">.env</code> para ativar o checkout automático.
+                {payConfig?.whatsapp ? " Clicando no botão você será redirecionado para o WhatsApp." : ""}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Plans */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -165,7 +244,7 @@ export default function PricingPage() {
                 <div className="mb-6">
                   <div className="flex items-end gap-1">
                     <span className="text-4xl font-bold text-white">
-                      {plan.price === 0 ? t.pricing.free : convertPrice(plan.price, currency)}
+                      {plan.price === 0 ? t.pricing.free : `R$${plan.priceBRL}`}
                     </span>
                     {plan.price > 0 && (
                       <span className="text-gray-500 mb-1.5">/{plan.interval}</span>
@@ -174,6 +253,11 @@ export default function PricingPage() {
                       <span className="text-gray-500 mb-1.5">{plan.interval}</span>
                     )}
                   </div>
+                  {plan.price > 0 && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      PIX • Boleto • Cartão de crédito
+                    </p>
+                  )}
                 </div>
 
                 {/* Features */}
@@ -205,8 +289,14 @@ export default function PricingPage() {
                 >
                   {loading === plan.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : noPayment && plan.id !== "free" ? (
+                    <MessageCircle className="w-4 h-4" />
                   ) : null}
-                  {isCurrent ? t.pricing.currentPlan : plan.cta}
+                  {isCurrent
+                    ? t.pricing.currentPlan
+                    : noPayment && plan.id !== "free"
+                    ? (payConfig?.whatsapp ? "Falar no WhatsApp" : plan.cta)
+                    : plan.cta}
                 </button>
               </div>
             );

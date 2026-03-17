@@ -3,6 +3,8 @@ Billing API — Stripe subscription management
 """
 import os
 import stripe
+import httpx
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +28,18 @@ class CheckoutSessionRequest(BaseModel):
 
 class PortalRequest(BaseModel):
     return_url: str
+
+
+class MercadoPagoRequest(BaseModel):
+    plan_id: str          # "pro" or "enterprise"
+    plan_name: str        # "Pro" or "Empresarial"
+    price: float          # 47.0 or 197.0
+    success_url: str
+    cancel_url: str
+
+class MPWebhookPayload(BaseModel):
+    type: str
+    data: dict
 
 
 @router.post("/create-checkout-session")
@@ -162,4 +176,137 @@ async def subscription_status(
         "plan": current_user.plan,
         "stripe_customer_id": current_user.stripe_customer_id,
         "is_subscribed": current_user.plan in ("pro", "enterprise"),
+    }
+
+
+@router.post("/create-mp-preference")
+async def create_mp_preference(
+    body: MercadoPagoRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a Mercado Pago checkout preference for plan subscription."""
+    mp_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
+    if not mp_token:
+        raise HTTPException(
+            status_code=503,
+            detail="Pagamentos via Mercado Pago não configurados. Entre em contato com o suporte."
+        )
+
+    preference_data = {
+        "items": [
+            {
+                "id": body.plan_id,
+                "title": f"ViralCommerce AI — Plano {body.plan_name}",
+                "description": f"Assinatura mensal do Plano {body.plan_name}",
+                "quantity": 1,
+                "unit_price": body.price,
+                "currency_id": "BRL",
+            }
+        ],
+        "payer": {
+            "email": current_user.email,
+        },
+        "back_urls": {
+            "success": body.success_url,
+            "failure": body.cancel_url,
+            "pending": body.success_url + "&status=pending",
+        },
+        "auto_return": "approved",
+        "external_reference": str(current_user.id),
+        "statement_descriptor": "VIRALCOMMERCE",
+        "metadata": {
+            "user_id": str(current_user.id),
+            "plan": body.plan_id,
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                "https://api.mercadopago.com/checkout/preferences",
+                headers={
+                    "Authorization": f"Bearer {mp_token}",
+                    "Content-Type": "application/json",
+                },
+                json=preference_data,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        # Return sandbox URL in test mode, production URL in prod
+        is_sandbox = mp_token.startswith("TEST-")
+        checkout_url = data.get("sandbox_init_point" if is_sandbox else "init_point", data.get("init_point"))
+
+        return {
+            "checkout_url": checkout_url,
+            "preference_id": data.get("id"),
+            "provider": "mercadopago",
+        }
+    except httpx.HTTPStatusError as e:
+        detail = f"Mercado Pago error: {e.response.text[:200]}"
+        raise HTTPException(status_code=502, detail=detail)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Falha ao criar preferência de pagamento")
+
+
+@router.post("/mp-webhook")
+async def mercadopago_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Mercado Pago IPN/webhook notifications."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return {"received": True}
+
+    mp_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
+    notification_type = payload.get("type", "")
+
+    # Handle payment approval
+    if notification_type == "payment":
+        payment_id = payload.get("data", {}).get("id")
+        if payment_id and mp_token:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(
+                        f"https://api.mercadopago.com/v1/payments/{payment_id}",
+                        headers={"Authorization": f"Bearer {mp_token}"},
+                    )
+                    payment = resp.json()
+
+                if payment.get("status") == "approved":
+                    user_id = payment.get("metadata", {}).get("user_id") or payment.get("external_reference")
+                    plan = payment.get("metadata", {}).get("plan", "pro")
+                    if user_id:
+                        from sqlalchemy import update
+                        from backend.models.user import User as UserModel
+                        import uuid as _uuid
+                        try:
+                            await db.execute(
+                                update(UserModel)
+                                .where(UserModel.id == _uuid.UUID(user_id))
+                                .values(plan=plan)
+                            )
+                            await db.commit()
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+    return {"received": True}
+
+
+@router.get("/payment-config")
+async def payment_config():
+    """Return which payment providers are configured (for frontend detection)."""
+    stripe_configured = bool(os.getenv("STRIPE_SECRET_KEY", ""))
+    mp_configured = bool(os.getenv("MERCADOPAGO_ACCESS_TOKEN", ""))
+    whatsapp = os.getenv("SUPPORT_WHATSAPP", "")
+    return {
+        "stripe": stripe_configured,
+        "mercadopago": mp_configured,
+        "any_configured": stripe_configured or mp_configured,
+        "whatsapp": whatsapp,
     }
