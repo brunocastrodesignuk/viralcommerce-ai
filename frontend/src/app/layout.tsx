@@ -7,13 +7,13 @@ import { AppShell } from "@/components/layout/AppShell";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ViralCommerce AI — Viral Product Discovery Platform",
-  description: "Discover viral products, find suppliers, generate ads and scale your e-commerce business with AI.",
+  title: "ViralCommerce AI — Plataforma de Descoberta de Produtos Virais",
+  description: "Descubra produtos virais, encontre fornecedores, gere anúncios e escale seu e-commerce com IA.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning translate="no">
       <body className={`${inter.className} text-gray-100 antialiased`}>
         <Providers>
           <AppShell>{children}</AppShell>
