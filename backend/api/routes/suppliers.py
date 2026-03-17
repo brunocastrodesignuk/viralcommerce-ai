@@ -13,6 +13,15 @@ from backend.models.product import ProductListing
 
 router = APIRouter()
 
+# ─── Platform homepage / search URLs (always valid & working) ─────────────────
+_PLATFORM_URLS = {
+    "aliexpress":      "https://www.aliexpress.com/wholesale?SearchText=dropshipping+trending",
+    "alibaba":         "https://www.alibaba.com/trade/search?SearchText=dropshipping",
+    "cj_dropshipping": "https://app.cjdropshipping.com/",
+    "temu":            "https://www.temu.com/channel/best-sellers.html",
+    "amazon":          "https://affiliate-program.amazon.com",
+}
+
 # ─── High-fidelity mock supplier data ────────────────────────────────────────
 _MOCK_SUPPLIERS = [
     {
@@ -22,7 +31,7 @@ _MOCK_SUPPLIERS = [
         "rating": 4.8,
         "is_verified": True,
         "ships_to": ["US", "CA", "AU", "UK", "DE", "FR"],
-        "store_url": "https://www.aliexpress.com/store/1234567",
+        "store_url": "https://www.aliexpress.com/wholesale?SearchText=beauty+care+skincare&SortType=total_tranpro_desc",
         "listings": [
             {
                 "id": "lst-001", "product_name": "Oval Face Framing Glasses Anti Blue Light",
@@ -48,7 +57,7 @@ _MOCK_SUPPLIERS = [
         "rating": 4.6,
         "is_verified": True,
         "ships_to": ["US", "CA", "AU", "UK", "BR", "MX"],
-        "store_url": "https://cjdropshipping.com/supplier/fashion-hub",
+        "store_url": "https://app.cjdropshipping.com/",
         "listings": [
             {
                 "id": "lst-004", "product_name": "Cloud Slippers Thick Sole Platform",
@@ -74,7 +83,7 @@ _MOCK_SUPPLIERS = [
         "rating": 4.7,
         "is_verified": True,
         "ships_to": ["US", "CA", "UK", "AU", "SG", "NZ"],
-        "store_url": "https://www.aliexpress.com/store/7654321",
+        "store_url": "https://www.aliexpress.com/wholesale?SearchText=gadget+tech+electronics&SortType=total_tranpro_desc",
         "listings": [
             {
                 "id": "lst-007", "product_name": "Portable Neck Fan Mini Air Conditioner",
@@ -95,7 +104,7 @@ _MOCK_SUPPLIERS = [
         "rating": 4.5,
         "is_verified": False,
         "ships_to": ["US", "CA", "AU", "UK", "DE", "FR", "JP"],
-        "store_url": "https://beauty-factory.en.alibaba.com",
+        "store_url": "https://www.alibaba.com/trade/search?SearchText=beauty+cosmetics+skincare&type=supplier",
         "listings": [
             {
                 "id": "lst-009", "product_name": "Korean Glass Skin Sunscreen SPF50+",
@@ -121,7 +130,7 @@ _MOCK_SUPPLIERS = [
         "rating": 4.4,
         "is_verified": True,
         "ships_to": ["US", "CA", "UK", "AU", "NZ"],
-        "store_url": "https://cjdropshipping.com/supplier/home-lifestyle",
+        "store_url": "https://app.cjdropshipping.com/",
         "listings": [
             {
                 "id": "lst-012", "product_name": "Matcha Whisk Set Bamboo Traditional",
@@ -147,7 +156,7 @@ _MOCK_SUPPLIERS = [
         "rating": 4.6,
         "is_verified": True,
         "ships_to": ["US", "CA", "AU", "UK", "IE"],
-        "store_url": "https://www.aliexpress.com/store/9876543",
+        "store_url": "https://www.aliexpress.com/wholesale?SearchText=health+wellness+fitness&SortType=total_tranpro_desc",
         "listings": [
             {
                 "id": "lst-015", "product_name": "Ice Roller Face Lymphatic Drainage",
@@ -197,11 +206,34 @@ _MOCK_SUPPLIERS = [
             },
         ],
     },
+    {
+        "id": "sup-008",
+        "platform": "temu",
+        "name": "Temu — Best Sellers Dropship",
+        "rating": 4.3,
+        "is_verified": True,
+        "ships_to": ["US", "CA", "UK", "AU", "DE", "FR", "NL"],
+        "store_url": "https://www.temu.com/channel/best-sellers.html",
+        "listings": [
+            {
+                "id": "lst-021", "product_name": "Aesthetic Room Decor Set LED",
+                "cost_price": 5.99, "shipping_cost": 0, "moq": 1,
+                "profit_margin_pct": 69.5, "lead_time_days": 10,
+            },
+            {
+                "id": "lst-022", "product_name": "Mini Portable Blender Juicer",
+                "cost_price": 8.50, "shipping_cost": 0, "moq": 1,
+                "profit_margin_pct": 66.1, "lead_time_days": 12,
+            },
+        ],
+    },
 ]
 
 
 def _serialize_supplier(s: Supplier, listings: list) -> dict:
     """Convert DB Supplier + its listings into the shape the frontend expects."""
+    # Use platform homepage URL as fallback if supplier has no specific URL
+    fallback_url = _PLATFORM_URLS.get(s.platform or "", "")
     return {
         "id": str(s.id),
         "platform": s.platform,
@@ -209,7 +241,7 @@ def _serialize_supplier(s: Supplier, listings: list) -> dict:
         "rating": float(s.rating) if s.rating else 0,
         "is_verified": s.is_verified,
         "ships_to": s.ships_to or [],
-        "store_url": s.url,          # DB field is `url`; frontend expects `store_url`
+        "store_url": s.url or fallback_url,   # DB field is `url`; fallback to platform URL
         "listings": [
             {
                 "id": str(lst.id),
