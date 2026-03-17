@@ -10,13 +10,14 @@ import {
   ShoppingCart, BarChart2, Activity, Globe,
 } from "lucide-react";
 import { analyticsApi } from "@/lib/api";
+import { usePreferences, convertPrice } from "@/store/preferences";
 
 const PLATFORM_COLORS: Record<string, string> = {
-  tiktok: "#ff0050",
+  tiktok:    "#ff0050",
   instagram: "#c13584",
-  youtube: "#ff0000",
+  youtube:   "#ff0000",
   pinterest: "#e60023",
-  amazon: "#ff9900",
+  amazon:    "#ff9900",
 };
 
 const CATEGORY_COLORS = [
@@ -40,7 +41,7 @@ function StatCard({
 }) {
   const { bg, text } = COLOR_MAP[color] ?? COLOR_MAP.brand;
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+    <div className="card">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-gray-400">{title}</span>
         <div className={`p-2 rounded-lg ${bg}`}>
@@ -54,6 +55,8 @@ function StatCard({
 }
 
 export default function AnalyticsPage() {
+  const { currency } = usePreferences();
+
   const { data: overview, isLoading: loadingOverview } = useQuery({
     queryKey: ["analytics-overview"],
     queryFn: () => analyticsApi.getOverview(),
@@ -88,60 +91,63 @@ export default function AnalyticsPage() {
     );
   }
 
+  const totalRevenue = (overview?.total_revenue ?? 0) / 1000;
+  const totalSpend   = (overview?.total_ad_spend ?? 0) / 1000;
+
   const kpis = [
     {
-      title: "Total Revenue",
-      value: `$${((overview?.total_revenue ?? 0) / 1000).toFixed(1)}K`,
-      subtitle: "All-time campaign revenue",
+      title: "Receita Total",
+      value: `${convertPrice(totalRevenue * 1000, currency).replace(/,\d+$/, "K")}`,
+      subtitle: "Receita acumulada de campanhas",
       icon: DollarSign,
       color: "green",
     },
     {
-      title: "Total Ad Spend",
-      value: `$${((overview?.total_ad_spend ?? 0) / 1000).toFixed(1)}K`,
-      subtitle: "All-time spend across networks",
+      title: "Gasto em Anúncios",
+      value: `${convertPrice(totalSpend * 1000, currency).replace(/,\d+$/, "K")}`,
+      subtitle: "Gasto total em todas as redes",
       icon: TrendingUp,
       color: "brand",
     },
     {
-      title: "Avg ROAS",
+      title: "ROAS Médio",
       value: `${(overview?.avg_roas ?? 0).toFixed(2)}×`,
-      subtitle: "Return on ad spend",
+      subtitle: "Retorno sobre gasto em anúncios",
       icon: BarChart2,
       color: "purple",
     },
     {
-      title: "Viral Products",
+      title: "Produtos Virais",
       value: overview?.viral_products_count ?? 0,
-      subtitle: "Products with score ≥ 70",
+      subtitle: "Produtos com score ≥ 70",
       icon: Activity,
       color: "red",
     },
     {
-      title: "Videos Tracked",
-      value: overview?.total_videos_tracked?.toLocaleString() ?? 0,
-      subtitle: "Across all platforms",
+      title: "Vídeos Rastreados",
+      value: overview?.total_videos_tracked?.toLocaleString("pt-BR") ?? 0,
+      subtitle: "Em todas as plataformas",
       icon: Eye,
       color: "brand",
     },
     {
-      title: "Conversions",
-      value: overview?.total_conversions?.toLocaleString() ?? 0,
-      subtitle: "Total ad conversions",
+      title: "Conversões",
+      value: overview?.total_conversions?.toLocaleString("pt-BR") ?? 0,
+      subtitle: "Total de conversões em anúncios",
       icon: ShoppingCart,
       color: "green",
     },
     {
-      title: "Avg CTR",
+      title: "CTR Médio",
       value: `${((overview?.avg_ctr ?? 0) * 100).toFixed(2)}%`,
-      subtitle: "Click-through rate",
+      subtitle: "Taxa de cliques",
       icon: MousePointerClick,
       color: "amber",
     },
     {
-      title: "Platforms Active",
+      title: "Plataformas Ativas",
       value: overview?.active_platforms ?? 0,
-      subtitle: "Crawling right now",
+      subtitle: "Rastreando agora",
       icon: Globe,
       color: "purple",
     },
@@ -151,9 +157,9 @@ export default function AnalyticsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Analytics</h1>
+        <h1 className="text-2xl font-bold text-white">Análises</h1>
         <p className="text-gray-400 text-sm mt-1">
-          Real-time performance across all campaigns and crawlers
+          Desempenho em tempo real de todas as campanhas e rastreadores
         </p>
       </div>
 
@@ -167,9 +173,9 @@ export default function AnalyticsPage() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Viral Score Timeline */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Viral Score Timeline (7d)
+            Score Viral ao Longo do Tempo (7 dias)
           </h2>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={timeline ?? []}>
@@ -189,7 +195,7 @@ export default function AnalyticsPage() {
               <Area
                 type="monotone"
                 dataKey="avg_score"
-                name="Avg Score"
+                name="Score Médio"
                 stroke="#0ea5e9"
                 fill="url(#scoreGrad)"
                 strokeWidth={2}
@@ -199,9 +205,9 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Category Breakdown */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Products by Category
+            Produtos por Categoria
           </h2>
           <div className="flex items-center gap-4">
             <ResponsiveContainer width="50%" height={220}>
@@ -216,7 +222,7 @@ export default function AnalyticsPage() {
                   strokeWidth={2}
                   stroke="#111827"
                 >
-                  {(categoryBreakdown ?? []).map((_, i) => (
+                  {(categoryBreakdown ?? []).map((_: any, i: number) => (
                     <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
                   ))}
                 </Pie>
@@ -243,9 +249,9 @@ export default function AnalyticsPage() {
 
       {/* Platform Stats */}
       {platformStats && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Platform Performance
+            Desempenho por Plataforma
           </h2>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={platformStats} barCategoryGap="30%">
@@ -257,7 +263,7 @@ export default function AnalyticsPage() {
                 labelStyle={{ color: "#e5e7eb" }}
               />
               <Legend wrapperStyle={{ fontSize: 12, color: "#9ca3af" }} />
-              <Bar dataKey="videos_found" name="Videos" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="videos_found" name="Vídeos" radius={[4, 4, 0, 0]}>
                 {platformStats.map((entry: any) => (
                   <Cell
                     key={entry.platform}
@@ -272,20 +278,20 @@ export default function AnalyticsPage() {
 
       {/* Ad Performance Table */}
       {adPerformance && adPerformance.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="card">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Top Performing Ads
+            Anúncios com Melhor Desempenho
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-gray-500 text-xs border-b border-gray-800">
-                  <th className="text-left pb-3 pr-4">Ad Name</th>
-                  <th className="text-right pb-3 pr-4">Impressions</th>
-                  <th className="text-right pb-3 pr-4">Clicks</th>
+                  <th className="text-left pb-3 pr-4">Nome do Anúncio</th>
+                  <th className="text-right pb-3 pr-4">Impressões</th>
+                  <th className="text-right pb-3 pr-4">Cliques</th>
                   <th className="text-right pb-3 pr-4">CTR</th>
-                  <th className="text-right pb-3 pr-4">Spend</th>
-                  <th className="text-right pb-3 pr-4">Revenue</th>
+                  <th className="text-right pb-3 pr-4">Gasto</th>
+                  <th className="text-right pb-3 pr-4">Receita</th>
                   <th className="text-right pb-3">ROAS</th>
                 </tr>
               </thead>
@@ -296,19 +302,19 @@ export default function AnalyticsPage() {
                       {ad.headline}
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      {Number(ad.impressions ?? 0).toLocaleString()}
+                      {Number(ad.impressions ?? 0).toLocaleString("pt-BR")}
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      {Number(ad.clicks ?? 0).toLocaleString()}
+                      {Number(ad.clicks ?? 0).toLocaleString("pt-BR")}
                     </td>
                     <td className="py-3 pr-4 text-right">
                       {((Number(ad.ctr ?? 0)) * 100).toFixed(2)}%
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      ${Number(ad.spend ?? 0).toFixed(2)}
+                      {convertPrice(Number(ad.spend ?? 0), currency)}
                     </td>
                     <td className="py-3 pr-4 text-right text-green-400">
-                      ${Number(ad.revenue ?? 0).toFixed(2)}
+                      {convertPrice(Number(ad.revenue ?? 0), currency)}
                     </td>
                     <td className="py-3 text-right">
                       <span

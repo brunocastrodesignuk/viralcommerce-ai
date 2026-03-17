@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Play, Square, RefreshCw, Wifi, WifiOff, Clock,
+  Play, RefreshCw, Clock,
   CheckCircle2, XCircle, Loader2, Hash, Globe,
 } from "lucide-react";
 import { crawlerApi, productsApi } from "@/lib/api";
@@ -12,12 +12,26 @@ import toast from "react-hot-toast";
 const PLATFORMS = ["tiktok", "instagram", "youtube", "pinterest", "amazon"];
 const JOB_TYPES = ["trending", "hashtag_scan", "product_search", "profile"];
 
+const JOB_TYPE_PT: Record<string, string> = {
+  trending:       "Em Alta",
+  hashtag_scan:   "Scan Hashtag",
+  product_search: "Busca Produto",
+  profile:        "Perfil",
+};
+
 const PLATFORM_ICONS: Record<string, string> = {
-  tiktok: "🎵",
+  tiktok:    "🎵",
   instagram: "📸",
-  youtube: "▶️",
+  youtube:   "▶️",
   pinterest: "📌",
-  amazon: "📦",
+  amazon:    "📦",
+};
+
+const STATUS_PT: Record<string, string> = {
+  pending:   "Aguardando",
+  running:   "Executando",
+  completed: "Concluído",
+  failed:    "Falhou",
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -36,7 +50,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${styles[status] ?? styles.pending}`}>
       {icons[status]}
-      {status}
+      {STATUS_PT[status] ?? status}
     </span>
   );
 }
@@ -57,7 +71,9 @@ function JobRow({ job }: { job: any }) {
           <span className="text-gray-200 font-medium capitalize">{job.platform}</span>
         </div>
       </td>
-      <td className="py-3 px-4 text-gray-400 text-sm">{job.job_type}</td>
+      <td className="py-3 px-4 text-gray-400 text-sm">
+        {JOB_TYPE_PT[job.job_type] ?? job.job_type}
+      </td>
       <td className="py-3 px-4 text-gray-400 text-sm truncate max-w-32">
         {job.target ?? <span className="text-gray-600">—</span>}
       </td>
@@ -76,17 +92,12 @@ function JobRow({ job }: { job: any }) {
       </td>
       <td className="py-3 px-4 text-gray-500 text-xs">
         {job.created_at
-          ? new Date(job.created_at).toLocaleString([], {
+          ? new Date(job.created_at).toLocaleString("pt-BR", {
               month: "short", day: "numeric",
               hour: "2-digit", minute: "2-digit",
             })
           : "—"}
       </td>
-      {job.error_msg && (
-        <td className="py-3 px-4 text-red-400 text-xs max-w-48 truncate" title={job.error_msg}>
-          {job.error_msg}
-        </td>
-      )}
     </tr>
   );
 }
@@ -94,8 +105,8 @@ function JobRow({ job }: { job: any }) {
 export default function CrawlerPage() {
   const queryClient = useQueryClient();
   const [platform, setPlatform] = useState("tiktok");
-  const [jobType, setJobType] = useState("trending");
-  const [target, setTarget] = useState("");
+  const [jobType, setJobType]   = useState("trending");
+  const [target, setTarget]     = useState("");
 
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["crawler-jobs"],
@@ -113,17 +124,17 @@ export default function CrawlerPage() {
     mutationFn: () =>
       crawlerApi.startJob({ platform, job_type: jobType, target: target || undefined }),
     onSuccess: () => {
-      toast.success(`Started ${platform} ${jobType} crawler`);
+      toast.success(`✅ Rastreador ${platform} iniciado!`);
       queryClient.invalidateQueries({ queryKey: ["crawler-jobs"] });
     },
-    onError: () => toast.error("Failed to start crawler"),
+    onError: () => toast.error("Falha ao iniciar rastreador"),
   });
 
   const crawlTikTok = useMutation({
     mutationFn: () => productsApi.crawlTikTokShop(20),
     onSuccess: (res: any) => {
       const count = res?.data?.saved ?? res?.data?.products?.length ?? "?";
-      toast.success(`TikTok Shop: ${count} produtos salvos!`);
+      toast.success(`🎵 TikTok Shop: ${count} produtos salvos!`);
       queryClient.invalidateQueries({ queryKey: ["crawler-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
@@ -133,10 +144,10 @@ export default function CrawlerPage() {
   const scanHashtags = useMutation({
     mutationFn: () => crawlerApi.scanHashtags(),
     onSuccess: () => {
-      toast.success("Hashtag scan queued for all platforms");
+      toast.success("🔖 Scan de hashtags iniciado!");
       queryClient.invalidateQueries({ queryKey: ["crawler-jobs"] });
     },
-    onError: () => toast.error("Failed to queue hashtag scan"),
+    onError: () => toast.error("Falha ao iniciar scan de hashtags"),
   });
 
   const runningJobs = (jobs ?? []).filter((j: any) => j.status === "running");
@@ -147,21 +158,21 @@ export default function CrawlerPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Crawler Monitor</h1>
+          <h1 className="text-2xl font-bold text-white">Monitor de Rastreadores</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Control and monitor all platform scrapers
+            Controle e monitore todos os rastreadores de plataformas
           </p>
         </div>
         <div className="flex items-center gap-2">
           {runningJobs.length > 0 ? (
             <span className="flex items-center gap-2 text-sm text-green-400">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              {runningJobs.length} active
+              {runningJobs.length} ativo{runningJobs.length > 1 ? "s" : ""}
             </span>
           ) : (
             <span className="flex items-center gap-2 text-sm text-gray-500">
               <span className="w-2 h-2 rounded-full bg-gray-600" />
-              Idle
+              Inativo
             </span>
           )}
         </div>
@@ -171,12 +182,12 @@ export default function CrawlerPage() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total Jobs", value: stats.total_jobs?.toLocaleString() ?? 0, color: "text-white" },
-            { label: "Completed", value: stats.completed_jobs?.toLocaleString() ?? 0, color: "text-green-400" },
-            { label: "Failed", value: stats.failed_jobs?.toLocaleString() ?? 0, color: "text-red-400" },
-            { label: "Videos Found", value: stats.total_videos_found?.toLocaleString() ?? 0, color: "text-brand-400" },
+            { label: "Total de Jobs",  value: stats.total_jobs?.toLocaleString("pt-BR") ?? 0,          color: "text-white" },
+            { label: "Concluídos",     value: stats.completed_jobs?.toLocaleString("pt-BR") ?? 0,      color: "text-green-400" },
+            { label: "Com Falha",      value: stats.failed_jobs?.toLocaleString("pt-BR") ?? 0,         color: "text-red-400" },
+            { label: "Vídeos Encontrados", value: stats.total_videos_found?.toLocaleString("pt-BR") ?? 0, color: "text-brand-400" },
           ].map((stat) => (
-            <div key={stat.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div key={stat.label} className="card">
               <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
               <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
             </div>
@@ -185,14 +196,14 @@ export default function CrawlerPage() {
       )}
 
       {/* Controls */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <div className="card">
         <h2 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
-          <Play className="w-4 h-4" /> Launch Crawler
+          <Play className="w-4 h-4" /> Iniciar Rastreador
         </h2>
         <div className="flex flex-wrap gap-3">
           {/* Platform */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Platform</label>
+            <label className="text-xs text-gray-500">Plataforma</label>
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
@@ -208,24 +219,24 @@ export default function CrawlerPage() {
 
           {/* Job Type */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Job Type</label>
+            <label className="text-xs text-gray-500">Tipo de Job</label>
             <select
               value={jobType}
               onChange={(e) => setJobType(e.target.value)}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 focus:outline-none focus:border-brand-500"
             >
               {JOB_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>{JOB_TYPE_PT[t] ?? t}</option>
               ))}
             </select>
           </div>
 
-          {/* Target (hashtag / URL / keyword) */}
+          {/* Target */}
           <div className="flex flex-col gap-1 flex-1 min-w-40">
-            <label className="text-xs text-gray-500">Target (optional)</label>
+            <label className="text-xs text-gray-500">Alvo (opcional)</label>
             <input
               type="text"
-              placeholder="e.g. tiktokmademebuyit"
+              placeholder="ex: tiktokmademebuyit"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500"
@@ -234,7 +245,7 @@ export default function CrawlerPage() {
 
           {/* Buttons */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 invisible">Action</label>
+            <label className="text-xs text-gray-500 invisible">Ação</label>
             <div className="flex gap-2">
               <button
                 onClick={() => startJob.mutate()}
@@ -246,7 +257,7 @@ export default function CrawlerPage() {
                 ) : (
                   <Play className="w-4 h-4" />
                 )}
-                Start
+                Iniciar
               </button>
               <button
                 onClick={() => scanHashtags.mutate()}
@@ -274,13 +285,13 @@ export default function CrawlerPage() {
       </div>
 
       {/* Jobs Table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="card p-0 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
-            Recent Jobs
+            Jobs Recentes
             {pendingJobs.length > 0 && (
               <span className="ml-2 text-xs text-amber-400">
-                ({pendingJobs.length} queued)
+                ({pendingJobs.length} na fila)
               </span>
             )}
           </h2>
@@ -299,20 +310,20 @@ export default function CrawlerPage() {
         ) : (jobs ?? []).length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-gray-600">
             <Globe className="w-8 h-8 mb-2" />
-            <p className="text-sm">No crawler jobs yet. Launch one above.</p>
+            <p className="text-sm">Nenhum job ainda. Inicie um rastreador acima.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-600 border-b border-gray-800">
-                  <th className="text-left py-3 px-4">Platform</th>
-                  <th className="text-left py-3 px-4">Type</th>
-                  <th className="text-left py-3 px-4">Target</th>
+                  <th className="text-left py-3 px-4">Plataforma</th>
+                  <th className="text-left py-3 px-4">Tipo</th>
+                  <th className="text-left py-3 px-4">Alvo</th>
                   <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Videos</th>
-                  <th className="text-left py-3 px-4">Duration</th>
-                  <th className="text-left py-3 px-4">Started</th>
+                  <th className="text-left py-3 px-4">Vídeos</th>
+                  <th className="text-left py-3 px-4">Duração</th>
+                  <th className="text-left py-3 px-4">Iniciado</th>
                 </tr>
               </thead>
               <tbody>

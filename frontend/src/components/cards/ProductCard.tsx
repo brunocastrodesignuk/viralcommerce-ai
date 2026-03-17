@@ -5,6 +5,7 @@ import { ViralScoreBadge } from "@/components/ui/ViralScoreBadge";
 import { ArrowUpRight, ShoppingCart, Zap, Package } from "lucide-react";
 import { clsx } from "clsx";
 import { useRouter } from "next/navigation";
+import { usePreferences, convertPrice } from "@/store/preferences";
 
 interface ProductCardProps {
   product: Product;
@@ -21,8 +22,9 @@ export function ProductCard({
   onFindSupplier,
   onClick,
 }: ProductCardProps) {
-  const img    = product.image_urls?.[0];
-  const router = useRouter();
+  const img      = product.image_urls?.[0];
+  const router   = useRouter();
+  const { currency } = usePreferences();
 
   const handleCardClick = () => {
     if (onClick) {
@@ -31,6 +33,13 @@ export function ProductCard({
       router.push(`/products/${product.id}`);
     }
   };
+
+  const priceMin = product.estimated_price_min;
+  const priceMax = product.estimated_price_max;
+  const priceStr =
+    priceMin && priceMax
+      ? `${convertPrice(priceMin, currency)} – ${convertPrice(priceMax, currency)}`
+      : "—";
 
   return (
     <div
@@ -62,43 +71,41 @@ export function ProductCard({
       {/* Price range */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs text-gray-500">Supplier cost</p>
-          <p className="text-sm font-bold text-green-400">
-            ${product.estimated_price_min?.toFixed(2)} – ${product.estimated_price_max?.toFixed(2)}
-          </p>
+          <p className="text-xs text-gray-500">Custo do fornecedor</p>
+          <p className="text-sm font-bold text-green-400">{priceStr}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500">Est. margin</p>
+          <p className="text-xs text-gray-500">Margem estimada</p>
           <p className="text-sm font-bold text-brand-400">
-            {getEstimatedMargin(product.estimated_price_min, product.estimated_price_max)}%
+            {getEstimatedMargin(priceMin, priceMax)}%
           </p>
         </div>
       </div>
 
       {/* Scores */}
       <div className="grid grid-cols-3 gap-2 mb-4">
-        <ScorePill label="Viral" value={product.viral_score} color="text-red-400" />
-        <ScorePill label="Demand" value={product.demand_score} color="text-brand-400" />
-        <ScorePill label="Compete" value={100 - product.competition_score} color="text-green-400" />
+        <ScorePill label="Viral"   value={product.viral_score}               color="text-red-400" />
+        <ScorePill label="Demanda" value={product.demand_score}              color="text-brand-400" />
+        <ScorePill label="Competir" value={100 - product.competition_score}  color="text-green-400" />
       </div>
 
       {/* Actions */}
       <div className="grid grid-cols-3 gap-2" onClick={(e) => e.stopPropagation()}>
         <ActionButton
           icon={<ShoppingCart className="w-3 h-3" />}
-          label="Import"
+          label="Importar"
           onClick={() => onImport?.(product)}
           className="bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border-brand-500/20"
         />
         <ActionButton
           icon={<Zap className="w-3 h-3" />}
-          label="Generate Ads"
+          label="Gerar anúncios"
           onClick={() => onGenerateAds?.(product)}
           className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/20"
         />
         <ActionButton
           icon={<ArrowUpRight className="w-3 h-3" />}
-          label="Supplier"
+          label="Fornecedor"
           onClick={() => onFindSupplier?.(product)}
           className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20"
         />
@@ -140,8 +147,8 @@ function ActionButton({
 
 function getEstimatedMargin(min?: number, max?: number): string {
   if (!min || !max) return "~";
-  const avgCost = (min + max) / 2;
+  const avgCost  = (min + max) / 2;
   const salePrice = avgCost * 3;
-  const margin = ((salePrice - avgCost) / salePrice) * 100;
+  const margin   = ((salePrice - avgCost) / salePrice) * 100;
   return Math.round(margin).toString();
 }
