@@ -19,9 +19,9 @@
   }
 }
 
-/* Apply theme tokens to layout */
+/* Apply theme tokens to layout — !important beats any Tailwind utility class */
 body {
-  background-color: var(--vc-bg);
+  background-color: var(--vc-bg) !important;
   transition: background-color 0.3s ease;
 }
 
