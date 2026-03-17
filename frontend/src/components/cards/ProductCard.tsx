@@ -151,12 +151,32 @@ export function ProductCard({
           <span className="text-xs text-gray-500">fornecedor</span>
         </div>
 
-        {/* Estimated margin badge */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Margem estimada:</span>
-          <span className="text-xs font-bold text-brand-400">
-            ~{getEstimatedMargin(priceMin, priceMax, product.demand_score, product.viral_score)}%
-          </span>
+        {/* Estimated margin + supplier search links */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500">Margem:</span>
+            <span className="text-xs font-bold text-brand-400">
+              ~{getEstimatedMargin(priceMin, priceMax, product.demand_score, product.viral_score)}%
+            </span>
+          </div>
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {[
+              { emoji: "🛒", title: "Ver no AliExpress", url: `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(product.name)}&SortType=SALE_PRICE_ASC` },
+              { emoji: "👗", title: "Ver na SHEIN", url: `https://www.shein.com/pdsearch/${encodeURIComponent(product.name)}/?ici=s_pdsearch_btn` },
+              { emoji: "🏷️", title: "Ver no Temu", url: `https://www.temu.com/search_result.html?search_key=${encodeURIComponent(product.name)}` },
+            ].map(({ emoji, title, url }) => (
+              <a
+                key={title}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={title}
+                className="text-sm leading-none p-1 rounded hover:bg-gray-700 transition-colors"
+              >
+                {emoji}
+              </a>
+            ))}
+          </div>
         </div>
 
         {/* Actions */}

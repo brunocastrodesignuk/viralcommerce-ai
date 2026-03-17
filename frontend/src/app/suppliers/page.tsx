@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Package, Star, DollarSign,
-  ExternalLink, Search, RefreshCw,
+  ExternalLink, Search, RefreshCw, Zap,
 } from "lucide-react";
 import { suppliersApi } from "@/lib/api";
 import { usePreferences, convertPrice, useT } from "@/store/preferences";
@@ -139,11 +139,21 @@ function SupplierCard({ supplier, currency }: { supplier: any; currency: any }) 
 }
 
 export default function SuppliersPage() {
-  const [search, setSearch]       = useState("");
-  const [platform, setPlatform]   = useState("all");
-  const [minMargin, setMinMargin] = useState(0);
+  const [search, setSearch]         = useState("");
+  const [platform, setPlatform]     = useState("all");
+  const [minMargin, setMinMargin]   = useState(0);
+  const [liveQuery, setLiveQuery]   = useState("");
+  const [liveInput, setLiveInput]   = useState("");
   const { currency } = usePreferences();
   const t = useT();
+
+  // Live product search across all supplier platforms
+  const { data: liveResults, isLoading: liveLoading } = useQuery({
+    queryKey: ["suppliers-live-search", liveQuery],
+    queryFn: () => suppliersApi.liveSearch(liveQuery, "aliexpress,shein,temu,cj"),
+    enabled: liveQuery.length >= 3,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["suppliers", platform, minMargin],
@@ -216,6 +226,101 @@ export default function SuppliersPage() {
           <option value={60}>≥ 60%</option>
           <option value={70}>≥ 70%</option>
         </select>
+      </div>
+
+      {/* Live Product Price Search */}
+      <div className="card border-brand-500/20">
+        <div className="flex items-center gap-2 mb-3">
+          <Zap className="w-4 h-4 text-brand-400" />
+          <h2 className="font-semibold text-gray-100 text-sm">Buscar Preço Real de Produto</h2>
+          <span className="text-xs text-gray-500 ml-1">— Encontre preços reais em todos os fornecedores</span>
+        </div>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder='Ex: "Snail Mucin Serum", "Cloud Slippers", "LED Face Mask"...'
+              value={liveInput}
+              onChange={(e) => setLiveInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && liveInput.length >= 3 && setLiveQuery(liveInput)}
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500"
+            />
+          </div>
+          <button
+            onClick={() => liveInput.length >= 3 && setLiveQuery(liveInput)}
+            disabled={liveInput.length < 3}
+            className="px-4 py-2.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Zap className="w-4 h-4" />
+            Buscar
+          </button>
+        </div>
+
+        {/* Quick search buttons — viral product names */}
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {["Snail Mucin Serum", "Cloud Slippers", "LED Face Mask", "Stanley Tumbler", "Acne Patch", "Gua Sha"].map((q) => (
+            <button
+              key={q}
+              onClick={() => { setLiveInput(q); setLiveQuery(q); }}
+              className="text-xs px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 rounded-full border border-gray-700 transition-colors"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+
+        {/* Live results */}
+        {liveLoading && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+            <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            Buscando preços em tempo real...
+          </div>
+        )}
+
+        {liveResults && liveResults.results && liveResults.results.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">
+              Resultados para "{liveResults.query}"
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {liveResults.results.map((r: any, i: number) => {
+                const badge = PLATFORM_BADGES[r.platform] ?? { label: r.platform, color: "text-gray-400 bg-gray-400/10" };
+                return (
+                  <a
+                    key={i}
+                    href={r.product_url || r.search_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-gray-800/60 hover:bg-gray-800 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-colors group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.color}`}>
+                        {badge.label}
+                      </span>
+                      {r.product_name && (
+                        <p className="text-xs text-gray-300 mt-1 truncate">{r.product_name}</p>
+                      )}
+                      {r.cost_price ? (
+                        <p className="text-sm font-bold text-green-400 mt-0.5">
+                          {convertPrice(r.cost_price, currency)}
+                          {r.shipping_cost > 0 && (
+                            <span className="text-xs text-gray-500 font-normal ml-1">
+                              +{convertPrice(r.shipping_cost, currency)} frete
+                            </span>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-0.5">{r.note || "Ver preço no site"}</p>
+                      )}
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-brand-400 ml-2 flex-shrink-0 transition-colors" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats bar */}

@@ -451,6 +451,38 @@ export default function ProductAnalysisPage() {
                 </div>
               ))}
             </div>
+
+            {/* Live supplier price search */}
+            <div className="mt-4 pt-4 border-t border-gray-800">
+              <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
+                <CheckCircle className="w-3 h-3 text-green-400" />
+                Ver preço real agora nos fornecedores:
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "AliExpress", emoji: "🛒", color: "text-red-400 border-red-500/20 bg-red-500/5 hover:bg-red-500/10",
+                    url: `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(product.name)}&SortType=SALE_PRICE_ASC` },
+                  { label: "SHEIN", emoji: "👗", color: "text-pink-400 border-pink-500/20 bg-pink-500/5 hover:bg-pink-500/10",
+                    url: `https://www.shein.com/pdsearch/${encodeURIComponent(product.name)}/?ici=s_pdsearch_btn` },
+                  { label: "CJ Dropship", emoji: "📦", color: "text-green-400 border-green-500/20 bg-green-500/5 hover:bg-green-500/10",
+                    url: `https://app.cjdropshipping.com/?_locale=en#/productPage?productNameEn=${encodeURIComponent(product.name)}` },
+                  { label: "Temu", emoji: "🏷️", color: "text-purple-400 border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10",
+                    url: `https://www.temu.com/search_result.html?search_key=${encodeURIComponent(product.name)}` },
+                ].map(({ label, emoji, color, url }) => (
+                  <a
+                    key={label}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${color}`}
+                  >
+                    <span>{emoji}</span>
+                    {label}
+                    <ExternalLink className="w-2.5 h-2.5 ml-auto" />
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
