@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { productsApi } from "@/lib/api";
+import { productsApi, api } from "@/lib/api";
 import { ProductCard } from "@/components/cards/ProductCard";
-import { TrendingUp, Package } from "lucide-react";
+import { TrendingUp, Package, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
 const CATEGORIES = [
@@ -18,11 +18,35 @@ const CATEGORIES = [
   "Toys & Games",
 ];
 
+const CATEGORY_PT: Record<string, string> = {
+  "All": "Todos",
+  "Electronics": "Eletrônicos",
+  "Beauty & Personal Care": "Beleza e Cuidados",
+  "Home & Kitchen": "Casa e Cozinha",
+  "Sports & Outdoors": "Esportes e Lazer",
+  "Health & Wellness": "Saúde e Bem-estar",
+  "Clothing & Accessories": "Roupas e Acessórios",
+  "Toys & Games": "Brinquedos e Jogos",
+};
+
 export default function ProductsPage() {
   const [category, setCategory] = useState<string | undefined>();
   const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("viral_score");
+  const [refreshingImages, setRefreshingImages] = useState(false);
+
+  const handleRefreshImages = async () => {
+    setRefreshingImages(true);
+    try {
+      const { data } = await api.post("/products/refresh-images");
+      toast.success(`🖼️ ${data.updated} imagens atualizadas de ${data.total} produtos!`);
+    } catch {
+      toast.error("Erro ao atualizar imagens. Tente novamente.");
+    } finally {
+      setRefreshingImages(false);
+    }
+  };
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["products", { category, minScore, page, sortBy }],
@@ -82,6 +106,14 @@ export default function ProductsPage() {
             {data?.total?.toLocaleString() ?? "—"} produtos descobertos
           </p>
         </div>
+        <button
+          onClick={handleRefreshImages}
+          disabled={refreshingImages}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshingImages ? "animate-spin" : ""}`} />
+          {refreshingImages ? "Atualizando..." : "Atualizar Imagens"}
+        </button>
       </div>
 
       {/* Filtros */}
@@ -100,7 +132,7 @@ export default function ProductsPage() {
                   : "bg-gray-800 text-gray-400 hover:bg-gray-700"
               }`}
             >
-              {cat === "All" ? "Todos" : cat}
+              {CATEGORY_PT[cat] ?? cat}
             </button>
           ))}
         </div>

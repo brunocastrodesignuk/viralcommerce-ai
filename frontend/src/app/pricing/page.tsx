@@ -10,61 +10,61 @@ import Link from "next/link";
 const PLANS = [
   {
     id: "free",
-    name: "Free",
+    name: "Gratuito",
     price: 0,
-    interval: "forever",
+    interval: "para sempre",
     icon: Zap,
     color: "gray",
-    description: "Perfect to get started",
+    description: "Perfeito para começar",
     features: [
-      "50 products/month",
-      "1 crawler platform",
-      "Basic analytics",
-      "Community support",
-      "1 active campaign",
+      "50 produtos/mês",
+      "1 plataforma de rastreamento",
+      "Analytics básico",
+      "Suporte da comunidade",
+      "1 campanha ativa",
     ],
-    cta: "Get Started Free",
+    cta: "Começar Grátis",
     priceId: null,
   },
   {
     id: "pro",
     name: "Pro",
     price: 47,
-    interval: "month",
+    interval: "mês",
     icon: Crown,
     color: "sky",
-    description: "For serious dropshippers",
+    description: "Para dropshippers sérios",
     features: [
-      "Unlimited products",
-      "All 5 platforms crawled",
-      "AI marketing generation",
-      "Advanced analytics + ROAS",
-      "10 active campaigns",
-      "Supplier auto-discovery",
-      "Priority support",
+      "Produtos ilimitados",
+      "5 plataformas rastreadas",
+      "Geração de marketing com IA",
+      "Analytics avançado + ROAS",
+      "10 campanhas ativas",
+      "Descoberta automática de fornecedores",
+      "Suporte prioritário",
     ],
-    cta: "Start Pro — $47/mo",
+    cta: "Assinar Pro — R$47/mês",
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? "price_pro",
     popular: true,
   },
   {
     id: "enterprise",
-    name: "Enterprise",
+    name: "Empresarial",
     price: 197,
-    interval: "month",
+    interval: "mês",
     icon: Building2,
     color: "purple",
-    description: "For teams and agencies",
+    description: "Para equipes e agências",
     features: [
-      "Everything in Pro",
-      "Unlimited campaigns",
-      "Custom crawl targets",
-      "White-label export",
-      "API access",
-      "Dedicated account manager",
-      "SLA 99.9% uptime",
+      "Tudo do plano Pro",
+      "Campanhas ilimitadas",
+      "Alvos de rastreamento personalizados",
+      "Exportação white-label",
+      "Acesso à API",
+      "Gerente de conta dedicado",
+      "SLA 99,9% de uptime",
     ],
-    cta: "Contact Sales",
+    cta: "Falar com Vendas",
     priceId: process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID ?? "price_enterprise",
   },
 ];
@@ -81,13 +81,13 @@ export default function PricingPage() {
     }
 
     if (!isAuthenticated) {
-      toast.error("Please sign in first");
+      toast.error("Faça login primeiro para assinar um plano.");
       window.location.href = "/login";
       return;
     }
 
     if (plan.id === "enterprise") {
-      window.open("mailto:sales@viralcommerce.ai?subject=Enterprise Plan", "_blank");
+      window.open("mailto:sales@viralcommerce.ai?subject=Plano Empresarial", "_blank");
       return;
     }
 
@@ -112,10 +112,10 @@ export default function PricingPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-4">
-            Simple, Transparent Pricing
+            Preços Simples e Transparentes
           </h1>
           <p className="text-gray-400 text-lg max-w-xl mx-auto">
-            Find viral products before your competition. Cancel anytime.
+            Descubra produtos virais antes da concorrência. Cancele quando quiser.
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default function PricingPage() {
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-sky-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      MOST POPULAR
+                      MAIS POPULAR
                     </span>
                   </div>
                 )}
@@ -201,7 +201,7 @@ export default function PricingPage() {
                   {loading === plan.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : null}
-                  {isCurrent ? "Current Plan" : plan.cta}
+                  {isCurrent ? "Plano Atual" : plan.cta}
                 </button>
               </div>
             );
@@ -210,8 +210,8 @@ export default function PricingPage() {
 
         {/* Footer note */}
         <p className="text-center text-sm text-gray-600 mt-8">
-          All plans include a 7-day free trial. No credit card required for Free plan.{" "}
-          <Link href="/" className="text-sky-400 hover:text-sky-300">Back to Dashboard</Link>
+          Todos os planos incluem 7 dias grátis. Cartão de crédito não exigido no plano gratuito.{" "}
+          <Link href="/" className="text-sky-400 hover:text-sky-300">Voltar ao Painel</Link>
         </p>
       </div>
     </div>

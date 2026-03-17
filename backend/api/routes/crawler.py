@@ -45,6 +45,50 @@ INSTAGRAM_TRENDING = [
      612000, ["acne","skincare","pimple","clearskin"], "acne+patch"),
 ]
 
+# ─── Curated Pinterest trending products ──────────────────────────────────
+PINTEREST_TRENDING = [
+    ("Aesthetic Room Decor Fairy Lights Set", "Home & Kitchen", 88.1, 14.99, 34.99,
+     289000, ["roomdecor","aesthetic","fairylights","homedecor"], "fairy+lights"),
+    ("Boho Macrame Wall Hanging Handmade", "Home & Kitchen", 86.4, 24.99, 59.99,
+     198000, ["macrame","boho","walldecor","handmade"], "macrame"),
+    ("Pressed Flower Resin Phone Case", "Electronics", 85.9, 12.99, 29.99,
+     341000, ["phonecase","pressedflower","aesthetic","diy"], "flower+case"),
+    ("Minimalist Wooden Desk Organizer Set", "Home & Kitchen", 87.2, 29.99, 64.99,
+     156000, ["deskorganizer","minimalist","homeoffice","wood"], "desk+org"),
+    ("Crochet Bucket Hat Handmade Cotton", "Clothing & Accessories", 89.3, 18.99, 39.99,
+     421000, ["crochet","bucket+hat","handmade","cottagecore"], "crochet+hat"),
+    ("Abstract Canvas Print Wall Art Set", "Home & Kitchen", 86.8, 34.99, 79.99,
+     234000, ["wallart","canvas","abstract","homedecor"], "wall+art"),
+    ("Vintage Brass Candlestick Holder Set", "Home & Kitchen", 85.1, 22.99, 49.99,
+     178000, ["candleholder","vintage","brass","tablescape"], "candle+hold"),
+    ("Aesthetic Gradient Tumbler Stanley Dupe", "Health & Wellness", 91.5, 16.99, 34.99,
+     612000, ["tumbler","waterbottle","aesthetic","hydration"], "tumbler"),
+]
+
+# ─── Curated Amazon trending products ─────────────────────────────────────
+AMAZON_TRENDING = [
+    ("Portable Blender USB Rechargeable", "Health & Wellness", 90.2, 19.99, 39.99,
+     489000, ["blender","portable","smoothie","fitness"], "blender"),
+    ("Air Fryer Compact 2.6 Qt Digital", "Home & Kitchen", 88.7, 39.99, 89.99,
+     567000, ["airfryer","cooking","healthy","kitchen"], "air+fryer"),
+    ("Foam Roller Deep Tissue Massage Grid", "Health & Wellness", 86.3, 14.99, 32.99,
+     298000, ["foamroller","fitness","recovery","massage"], "foam+roll"),
+    ("Smart Plug WiFi Alexa Compatible 4-Pack", "Electronics", 89.4, 24.99, 44.99,
+     723000, ["smarthome","alexa","wifi","automation"], "smart+plug"),
+    ("Resistance Bands Set Heavy Duty 5-Pack", "Sports & Outdoors", 91.1, 19.99, 39.99,
+     634000, ["resistancebands","workout","fitness","gym"], "bands"),
+    ("Stainless Steel Meal Prep Containers 7-Pack", "Health & Wellness", 87.6, 22.99, 44.99,
+     412000, ["mealprep","containers","healthy","food"], "meal+prep"),
+    ("Cordless Jump Rope Digital Counter", "Sports & Outdoors", 85.8, 12.99, 27.99,
+     356000, ["jumprope","fitness","cardio","workout"], "jump+rope"),
+    ("Electric Spin Scrubber Bathroom Cleaner", "Home & Kitchen", 92.3, 34.99, 69.99,
+     498000, ["cleaning","scrubber","bathroom","homecare"], "scrubber"),
+    ("Posture Corrector Adjustable Back Brace", "Health & Wellness", 88.9, 24.99, 49.99,
+     287000, ["posture","backpain","ergonomic","health"], "posture"),
+    ("Car Phone Mount Dashboard Magnetic", "Electronics", 86.5, 14.99, 29.99,
+     634000, ["phoneMount","car","magnetic","driving"], "car+mount"),
+]
+
 # ─── Curated YouTube trending products ────────────────────────────────────
 YOUTUBE_TRENDING = [
     ("Ring Light 18 inch with Tripod Stand", "Electronics", 90.4, 34.99, 79.99,
@@ -225,6 +269,56 @@ async def start_crawl_job(
                 "videos_found": len(raw),
                 "source": "youtube_trending_curated",
                 "note": "Curated YouTube trending data — YouTube Data API v3 key needed for live data",
+            }
+        except Exception as e:
+            job.status = "failed"
+            job.error_msg = str(e)[:500]
+            await db.commit()
+            return {"job_id": str(job.id), "status": "failed", "error": str(e)[:200]}
+
+    # ── Pinterest (curated high-fidelity data) ────────────────────────────
+    if platform == "pinterest":
+        try:
+            rng = random.Random()
+            items = list(PINTEREST_TRENDING)
+            rng.shuffle(items)
+            raw = [_make_product(item, rng) for item in items[:8]]
+            count = await _save_products(raw, db)
+            job.status = "completed"
+            job.videos_found = len(raw)
+            await db.commit()
+            return {
+                "job_id": str(job.id),
+                "status": "completed",
+                "products_discovered": count,
+                "videos_found": len(raw),
+                "source": "pinterest_trending_curated",
+                "note": "Curated Pinterest trending data — Pinterest API requires approved app for live data",
+            }
+        except Exception as e:
+            job.status = "failed"
+            job.error_msg = str(e)[:500]
+            await db.commit()
+            return {"job_id": str(job.id), "status": "failed", "error": str(e)[:200]}
+
+    # ── Amazon (curated high-fidelity data) ───────────────────────────────
+    if platform == "amazon":
+        try:
+            rng = random.Random()
+            items = list(AMAZON_TRENDING)
+            rng.shuffle(items)
+            raw = [_make_product(item, rng) for item in items[:10]]
+            count = await _save_products(raw, db)
+            job.status = "completed"
+            job.videos_found = len(raw)
+            await db.commit()
+            return {
+                "job_id": str(job.id),
+                "status": "completed",
+                "products_discovered": count,
+                "videos_found": len(raw),
+                "source": "amazon_trending_curated",
+                "note": "Curated Amazon trending data — Amazon PA-API requires Associates account for live data",
             }
         except Exception as e:
             job.status = "failed"

@@ -37,10 +37,83 @@ REQUEST_LATENCY = Histogram(
 )
 
 
+async def _startup_data_refresh():
+    """Auto-refresh images and hashtags on startup, then every 6 hours."""
+    import asyncio
+    from backend.core.database import AsyncSessionLocal
+    from backend.models.product import Product
+    from sqlalchemy import select
+
+    await asyncio.sleep(8)  # wait for DB to be fully ready
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                # 1. Refresh missing product images
+                result = await db.scalars(select(Product).where(Product.status == "active"))
+                products = result.all()
+                CATEGORY_COLORS = {
+                    "Beauty & Personal Care": ("1e1b4b", "a78bfa", "beauty"),
+                    "Electronics": ("0f172a", "38bdf8", "tech"),
+                    "Home & Kitchen": ("14532d", "86efac", "home"),
+                    "Clothing & Accessories": ("4c0519", "fda4af", "fashion"),
+                    "Sports & Outdoors": ("1c1917", "fdba74", "sports"),
+                    "Health & Wellness": ("052e16", "6ee7b7", "health"),
+                    "Toys & Games": ("1e1b4b", "fbbf24", "toys"),
+                }
+                updated = 0
+                for p in products:
+                    has_good_image = (
+                        p.image_urls and p.image_urls != [] and p.image_urls != [""]
+                        and not any("via.placeholder.com" in u for u in p.image_urls)
+                    )
+                    if has_good_image:
+                        continue
+                    bg, fg, hint = CATEGORY_COLORS.get(p.category, ("0f172a", "38bdf8", "product"))
+                    words = (p.name or hint).split()[:2]
+                    text = "+".join(w[:6] for w in words) if words else hint
+                    p.image_urls = [f"https://placehold.co/400x400/{bg}/{fg}?text={text}"]
+                    updated += 1
+                if updated:
+                    await db.commit()
+                    log.info("Startup image refresh", updated=updated, total=len(products))
+
+                # 2. Refresh hashtags
+                from backend.services.crawler.tiktok_shop import get_tiktok_hashtags
+                from backend.models.hashtag import Hashtag
+                from datetime import datetime, timezone
+                import uuid as _uuid
+                hashtags = await get_tiktok_hashtags(limit=15)
+                for h in hashtags:
+                    tag = h.get("tag", "")
+                    if not tag:
+                        continue
+                    existing = await db.scalar(select(Hashtag).where(Hashtag.tag == tag))
+                    if existing:
+                        existing.post_count = h.get("post_count", existing.post_count)
+                        existing.trend_velocity = h.get("trend_velocity", existing.trend_velocity)
+                        existing.updated_at = datetime.now(timezone.utc)
+                    else:
+                        db.add(Hashtag(
+                            id=_uuid.uuid4(), tag=tag, platform="tiktok",
+                            post_count=h.get("post_count", 0),
+                            trend_velocity=h.get("trend_velocity", 70.0),
+                            updated_at=datetime.now(timezone.utc),
+                        ))
+                await db.commit()
+                log.info("Startup hashtag refresh", count=len(hashtags))
+        except Exception as e:
+            log.warning("Startup data refresh error", error=str(e)[:200])
+
+        await asyncio.sleep(6 * 3600)  # repeat every 6 hours
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio
     log.info("Starting ViralCommerce AI", version=settings.APP_VERSION)
     await init_db()
+    # Launch background data refresh (non-blocking)
+    asyncio.create_task(_startup_data_refresh())
     yield
     log.info("Shutting down ViralCommerce AI")
     await close_db()
