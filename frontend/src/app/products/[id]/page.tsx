@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { ViralTimeline } from "@/components/charts/ViralTimeline";
+import { usePreferences, convertPrice } from "@/store/preferences";
 
 // ─── API ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 export default function ProductAnalysisPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { currency } = usePreferences();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["product-analysis", id],
@@ -171,7 +173,7 @@ export default function ProductAnalysisPage() {
                 </span>
                 <span className="text-gray-600">•</span>
                 <span className="text-sm text-gray-400">
-                  ${product.estimated_price_min?.toFixed(2)} – ${product.estimated_price_max?.toFixed(2)} custo fornecedor
+                  {convertPrice(product.estimated_price_min ?? 0, currency)} – {convertPrice(product.estimated_price_max ?? 0, currency)} custo fornecedor
                 </span>
               </div>
             </div>
@@ -207,7 +209,7 @@ export default function ProductAnalysisPage() {
         <StatCard
           icon={DollarSign}
           label="Mercado Mensal"
-          value={`$${((market_data?.market_size_monthly_usd || 0) / 1000).toFixed(0)}K`}
+          value={convertPrice(market_data?.market_size_monthly_usd || 0, currency)}
           sub={`${(market_data?.monthly_sales_estimate || 0).toLocaleString()} vendas/mês`}
         />
         <StatCard
@@ -286,7 +288,7 @@ export default function ProductAnalysisPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Preço médio competidor</span>
-                <span className="text-white font-semibold">${competition?.avg_competitor_price}</span>
+                <span className="text-white font-semibold">{convertPrice(Number(competition?.avg_competitor_price ?? 0), currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Nível</span>
@@ -315,12 +317,12 @@ export default function ProductAnalysisPage() {
             </h2>
             <div className="space-y-3">
               {[
-                ["Custo do Fornecedor", `$${profit_analysis?.supplier_cost}`, "text-red-400"],
-                ["Preço Sugerido de Venda", `$${profit_analysis?.recommended_price}`, "text-white"],
-                ["Lucro por Unidade", `$${profit_analysis?.profit_per_unit}`, "text-green-400"],
+                ["Custo do Fornecedor", convertPrice(Number(profit_analysis?.supplier_cost ?? 0), currency), "text-red-400"],
+                ["Preço Sugerido de Venda", convertPrice(Number(profit_analysis?.recommended_price ?? 0), currency), "text-white"],
+                ["Lucro por Unidade", convertPrice(Number(profit_analysis?.profit_per_unit ?? 0), currency), "text-green-400"],
                 ["Margem de Lucro", `${profit_analysis?.profit_margin_pct}%`, "text-green-400"],
                 ["ROI", `${profit_analysis?.roi_pct}%`, "text-sky-400"],
-                ["Gasto c/ Anúncio Sugerido", `$${profit_analysis?.ad_spend_suggested}`, "text-amber-400"],
+                ["Gasto c/ Anúncio Sugerido", convertPrice(Number(profit_analysis?.ad_spend_suggested ?? 0), currency), "text-amber-400"],
                 ["ROAS Alvo", `${profit_analysis?.target_roas}x`, "text-purple-400"],
               ].map(([label, value, color]) => (
                 <div key={label} className="flex justify-between items-center text-sm">
@@ -332,13 +334,13 @@ export default function ProductAnalysisPage() {
                 <div className="bg-green-500/10 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Receita Mensal Est.</p>
                   <p className="text-sm font-bold text-green-400">
-                    ${(profit_analysis?.monthly_revenue_est || 0).toLocaleString()}
+                    {convertPrice(profit_analysis?.monthly_revenue_est || 0, currency)}
                   </p>
                 </div>
                 <div className="bg-sky-500/10 rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Lucro Mensal Est.</p>
                   <p className="text-sm font-bold text-sky-400">
-                    ${(profit_analysis?.monthly_profit_est || 0).toLocaleString()}
+                    {convertPrice(profit_analysis?.monthly_profit_est || 0, currency)}
                   </p>
                 </div>
               </div>
@@ -366,11 +368,11 @@ export default function ProductAnalysisPage() {
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <p className="text-gray-500">Custo</p>
-                      <p className="text-white font-semibold">${s.cost_price?.toFixed(2)}</p>
+                      <p className="text-white font-semibold">{convertPrice(Number(s.cost_price ?? 0), currency)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Frete</p>
-                      <p className="text-white font-semibold">${s.shipping_cost?.toFixed(2)}</p>
+                      <p className="text-white font-semibold">{convertPrice(Number(s.shipping_cost ?? 0), currency)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Margem</p>

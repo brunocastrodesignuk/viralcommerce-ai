@@ -6,6 +6,7 @@ import { campaignsApi, productsApi, Campaign } from "@/lib/api";
 import { Play, Pause, Zap, TrendingUp, DollarSign, BarChart2, X, ChevronDown } from "lucide-react";
 import { clsx } from "clsx";
 import toast from "react-hot-toast";
+import { usePreferences, convertPrice } from "@/store/preferences";
 
 const STATUS_COLORS: Record<string, string> = {
   draft:     "bg-gray-500/20 text-gray-400",
@@ -33,6 +34,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [network, setNetwork] = useState<"meta" | "google" | "tiktok_ads">("tiktok_ads");
   const [budget, setBudget] = useState("50");
   const [productId, setProductId] = useState("");
+  const { currency } = usePreferences();
 
   const { data: products } = useQuery({
     queryKey: ["products-for-campaign"],
@@ -59,7 +61,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { toast.error("Informe o nome da campanha"); return; }
-    if (Number(budget) < 5) { toast.error("Orçamento mínimo: $5/dia"); return; }
+    if (Number(budget) < 5) { toast.error("Orçamento mínimo: USD 5/dia"); return; }
     createMutation.mutate();
   };
 
@@ -158,17 +160,17 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
               />
             </div>
             <div className="flex gap-2 mt-2">
-              {["20", "50", "100", "200"].map((v) => (
+              {[["20", 20], ["50", 50], ["100", 100], ["200", 200]].map(([v, usd]) => (
                 <button
                   key={v}
                   type="button"
-                  onClick={() => setBudget(v)}
+                  onClick={() => setBudget(String(v))}
                   className={clsx(
                     "px-3 py-1 rounded text-xs font-medium transition-colors",
-                    budget === v ? "bg-brand-500/20 text-brand-400 border border-brand-500/30" : "bg-gray-800 text-gray-500 hover:text-gray-300"
+                    budget === String(v) ? "bg-brand-500/20 text-brand-400 border border-brand-500/30" : "bg-gray-800 text-gray-500 hover:text-gray-300"
                   )}
                 >
-                  ${v}
+                  {convertPrice(Number(usd), currency)}
                 </button>
               ))}
             </div>
@@ -234,6 +236,7 @@ function NewCampaignModal({ onClose, onCreated }: { onClose: () => void; onCreat
 export default function CampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const qc = useQueryClient();
+  const { currency } = usePreferences();
 
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ["campaigns"],
@@ -301,13 +304,13 @@ export default function CampaignsPage() {
             },
             {
               label: "Gasto Total",
-              value: `$${campaigns?.reduce((s: number, c: Campaign) => s + (c.total_spend || 0), 0).toFixed(0) ?? 0}`,
+              value: convertPrice(campaigns?.reduce((s: number, c: Campaign) => s + (c.total_spend || 0), 0) ?? 0, currency),
               icon: <DollarSign className="w-4 h-4 text-brand-400" />,
               color: "text-brand-400",
             },
             {
               label: "Receita Total",
-              value: `$${campaigns?.reduce((s: number, c: Campaign) => s + (c.total_revenue || 0), 0).toFixed(0) ?? 0}`,
+              value: convertPrice(campaigns?.reduce((s: number, c: Campaign) => s + (c.total_revenue || 0), 0) ?? 0, currency),
               icon: <TrendingUp className="w-4 h-4 text-purple-400" />,
               color: "text-purple-400",
             },
@@ -376,9 +379,9 @@ export default function CampaignsPage() {
                             {STATUS_PT[c.status] ?? c.status}
                           </span>
                         </td>
-                        <td className="py-3 pr-4 text-sm text-gray-300">${c.daily_budget}</td>
-                        <td className="py-3 pr-4 text-sm text-gray-300">${c.total_spend?.toFixed(2) ?? "0.00"}</td>
-                        <td className="py-3 pr-4 text-sm text-green-400">${c.total_revenue?.toFixed(2) ?? "0.00"}</td>
+                        <td className="py-3 pr-4 text-sm text-gray-300">{convertPrice(c.daily_budget ?? 0, currency)}</td>
+                        <td className="py-3 pr-4 text-sm text-gray-300">{convertPrice(c.total_spend ?? 0, currency)}</td>
+                        <td className="py-3 pr-4 text-sm text-green-400">{convertPrice(c.total_revenue ?? 0, currency)}</td>
                         <td className="py-3 pr-4">
                           <span className={clsx("text-sm font-bold", c.roas >= 2 ? "text-green-400" : c.roas >= 1 ? "text-amber-400" : "text-red-400")}>
                             {c.roas?.toFixed(1) ?? "—"}x
