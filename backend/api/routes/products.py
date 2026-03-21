@@ -32,7 +32,7 @@ async def list_products(
     limit: int = Query(20, ge=1, le=100),
     category: Optional[str] = None,
     min_viral_score: float = Query(0, ge=0, le=100),
-    sort_by: str = Query("viral_score", enum=["viral_score", "profit_margin", "updated_at"]),
+    sort_by: str = Query("viral_score", enum=["viral_score", "profit_margin", "updated_at", "demand_score"]),
     db: AsyncSession = Depends(get_db),
 ):
     """List viral products with filtering and sorting."""
@@ -44,8 +44,11 @@ async def list_products(
         query = query.where(Product.category == category)
 
     sort_col = {
-        "viral_score": desc(Product.viral_score),
-        "updated_at":  desc(Product.updated_at),
+        "viral_score":    desc(Product.viral_score),
+        "updated_at":     desc(Product.updated_at),
+        "demand_score":   desc(Product.demand_score),
+        # profit_margin: aproxima pela diferença entre preço máx e mín
+        "profit_margin":  desc(Product.estimated_price_max - Product.estimated_price_min),
     }.get(sort_by, desc(Product.viral_score))
 
     total    = await db.scalar(select(func.count()).select_from(query.subquery()))
@@ -57,16 +60,47 @@ async def list_products(
 
 @router.post("/refresh-images")
 async def refresh_product_images(db: AsyncSession = Depends(get_db)):
-    """Batch-update all products with missing image_urls using loremflickr real-looking photos."""
-    CATEGORY_KEYWORDS = {
-        "Beauty & Personal Care": "beauty,skincare,cosmetics",
-        "Electronics": "electronics,gadget,technology",
-        "Home & Kitchen": "home,kitchen,decor",
-        "Clothing & Accessories": "fashion,clothing,accessories",
-        "Sports & Outdoors": "sports,fitness,exercise",
-        "Health & Wellness": "health,wellness,medicine",
-        "Toys & Games": "toys,children,play",
+    """Refresh all product images to use real Unsplash photos."""
+    REAL_PRODUCT_IMAGES = {
+        "led": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+        "galaxy": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&h=400&fit=crop",
+        "espresso": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400&h=400&fit=crop",
+        "makeup": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&h=400&fit=crop",
+        "brush": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&h=400&fit=crop",
+        "posture": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+        "wireless": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop",
+        "charging": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop",
+        "yoga": "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400&h=400&fit=crop",
+        "frother": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+        "milk": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+        "silicone": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&h=400&fit=crop",
+        "projector": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&h=400&fit=crop",
+        "star": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&h=400&fit=crop",
+        "portable": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400&h=400&fit=crop",
+        "strip": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+        "rgb": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+        "smart": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+        "fitness": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+        "back": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+        "corrector": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+        "coffee": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+        "electric": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop",
+        "foldable": "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400&h=400&fit=crop",
+        "mat": "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400&h=400&fit=crop",
+        "night": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&h=400&fit=crop",
+        "light": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+        "pad": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop",
+        "skin": "https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400&h=400&fit=crop",
+        "beauty": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&h=400&fit=crop",
     }
+
+    def get_real_image_for_product(product_name: str) -> str:
+        name_lower = product_name.lower()
+        for keyword, url in REAL_PRODUCT_IMAGES.items():
+            if keyword in name_lower:
+                return url
+        return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop"
+
     result = await db.scalars(
         select(Product).where(Product.status == "active")
     )
@@ -79,12 +113,12 @@ async def refresh_product_images(db: AsyncSession = Depends(get_db)):
             and p.image_urls != [""]
             and not any("via.placeholder.com" in url for url in p.image_urls)
             and not any("placehold.co" in url for url in p.image_urls)
+            and not any("loremflickr.com" in url for url in p.image_urls)
+            and not any("picsum.photos" in url for url in p.image_urls)
         )
         if has_good_image:
             continue
-        keyword = CATEGORY_KEYWORDS.get(p.category, "product,shop,retail")
-        seed = abs(hash(p.name or "product")) % 9999
-        p.image_urls = [f"https://loremflickr.com/400/400/{keyword}?lock={seed}"]
+        p.image_urls = [get_real_image_for_product(p.name or "product")]
         updated += 1
     await db.commit()
     return {"updated": updated, "total": len(products)}

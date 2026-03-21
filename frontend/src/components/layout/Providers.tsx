@@ -6,7 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
-import { OnboardingModal } from "@/components/modals/OnboardingModal";
+import { OnboardingWizard } from "@/components/ui/OnboardingWizard";
 import { usePreferences, applyTheme } from "@/store/preferences";
 
 /** Syncs the Zustand auth token into the axios default headers on mount. */
@@ -68,7 +68,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthSync />
       <ThemeSync />
       <PWARegistrar />
-      <OnboardingModal />
+      <OnboardingWizard />
       {children}
       <Toaster
         position="top-right"

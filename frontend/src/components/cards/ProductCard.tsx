@@ -76,10 +76,24 @@ export function ProductCard({
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              // Fallback to picsum.photos (reliable CDN) if original image fails
+              // Fallback: imagem Unsplash por categoria do produto
               const target = e.currentTarget;
-              const seed = Math.abs(product.name.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % 200;
-              target.src = `https://picsum.photos/seed/${seed}/400/400`;
+              const CATEGORY_FALLBACKS: Record<string, string> = {
+                "Beauty": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&h=400&fit=crop",
+                "Beauty & Personal Care": "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=400&h=400&fit=crop",
+                "Health & Beauty": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+                "Electronics": "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=400&h=400&fit=crop",
+                "Kitchen": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+                "Home & Kitchen": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+                "Home & Garden": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+                "Sports & Outdoors": "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=400&h=400&fit=crop",
+                "Health & Wellness": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop",
+                "Clothing & Accessories": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop",
+                "Toys & Games": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
+              };
+              const fallback = CATEGORY_FALLBACKS[product.category ?? ""]
+                ?? "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop";
+              target.src = fallback;
               target.onerror = null; // prevent infinite error loop
             }}
           />
@@ -148,8 +162,8 @@ export function ProductCard({
 
         {/* Price */}
         <div className="flex items-baseline gap-1 mt-auto pt-1">
-          <span className="text-lg font-bold text-green-400">{priceStr}</span>
-          <span className="text-xs text-gray-500">fornecedor</span>
+          <span className="text-xs text-gray-500">Custo fornecedor:</span>
+          <span className="text-base font-bold text-green-400">{priceStr}</span>
         </div>
 
         {/* Estimated margin + supplier search links */}
